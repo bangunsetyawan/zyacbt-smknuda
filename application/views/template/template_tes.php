@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title><?php if(!empty($site_name)){ echo $site_name; } ?> | <?php echo $title; ?></title>
     <!-- Tell the browser to be responsive to screen width -->
-    <meta content='width=device-width, initial-scale=0.9, minimum-scale=0.1, maximum-scale=10, user-scalable=yes' name='viewport' />
+    <meta content='width=device-width, initial-scale=1, maximum-scale=10, user-scalable=yes' name='viewport' />
 	<meta name="description" content="Aplikasi Ujian Online Berbasis Komputer SMK NU Darussalam" />
 	<meta name="keywords" content="CBT SMK NU Darussalam, Ujian Online SMK NU Darussalam, ZYACBT" />
 	<meta name="author" content="Achmad Lutfi" />
@@ -65,6 +65,89 @@
         max-width: 100%;
         height: auto;
       }
+      .main-header .navbar {
+        min-height: 54px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+      }
+      .cbt-topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 54px;
+        padding: 0 18px;
+        width: 100%;
+      }
+      .cbt-topbar::before,
+      .cbt-topbar::after {
+        display: none !important;
+        content: none !important;
+      }
+      .cbt-brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #fff !important;
+        text-decoration: none !important;
+        font-size: 19px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        line-height: 1;
+        white-space: nowrap;
+      }
+      .cbt-right-nav {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .cbt-clock-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        background: rgba(0, 0, 0, 0.22);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        color: #fff;
+        padding: 6px 13px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 700;
+        font-family: monospace;
+        letter-spacing: 0.5px;
+        white-space: nowrap;
+      }
+      @media (max-width: 480px) {
+        .cbt-topbar { padding: 0 12px; }
+        .cbt-brand { font-size: 18px; }
+        .cbt-clock-badge { font-size: 13px; padding: 5px 11px; }
+      }
+      /* Modal Ubah Password & Modal Proses lebih jelas di HP */
+      .modal-dialog {
+        margin: 18px 12px;
+      }
+      @media (min-width: 540px) {
+        .modal-dialog {
+          max-width: 480px;
+          margin: 40px auto;
+        }
+      }
+      .modal-content {
+        border-radius: 12px !important;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25) !important;
+      }
+      .modal-header {
+        background: #00a65a;
+        color: #fff;
+        padding: 15px 18px;
+      }
+      .modal-header .close {
+        color: #fff;
+        opacity: 0.9;
+        font-size: 26px;
+      }
+      .modal-title {
+        font-size: 18px;
+        font-weight: 800;
+      }
     </style>
 
     <script type="text/javascript">
@@ -105,19 +188,17 @@
 
       <header class="main-header">               
         <nav class="navbar navbar-static-top">
-          <div class="container">
-            <div class="navbar-header">
-              <a href="<?php echo base_url(); ?>" class="navbar-brand" style="display: flex; align-items: center; gap: 8px; padding-top: 10px; padding-bottom: 10px;">
-                <img src="<?php echo base_url(); ?>logo-smk.png" alt="Logo SMK NU Darussalam" style="height: 30px; width: auto;" />
-                <b><?php if(!empty($site_name)){ echo $site_name; } ?></b>
-              </a>
-            </div>
+          <div class="container cbt-topbar">
+            <a href="<?php echo base_url(); ?>" class="cbt-brand">
+              <b>ZYA CBT</b>
+            </a>
 
-            <div class="navbar-custom-menu">
-                <ul class="nav navbar-nav">
-                  <ul class="nav navbar-nav">
-                    <li><a href="#"><span id="timestamp"></span></a></li>
-                  </ul>
+            <div class="navbar-custom-menu cbt-right-nav">
+                <div class="cbt-clock-badge" title="Waktu Server">
+                  <i class="fa fa-clock-o"></i>
+                  <span id="timestamp"><?php echo date('H:i:s', !empty($timestamp) ? $timestamp : time()); ?> WIB</span>
+                </div>
+                <ul class="nav navbar-nav" style="margin: 0;">
                   <!-- User Account Menu -->
                   <li class="dropdown user user-menu">
                     <!-- Menu Toggle Button -->
@@ -217,18 +298,16 @@
 
   <script type="text/javascript">
     $(function () {
-        var serverTime = <?php if(!empty($timestamp)){ echo $timestamp; } ?>;
-        var counterTime=0;
-        var date;
+        var serverTime = <?php echo !empty($timestamp) ? (int)$timestamp : time(); ?>;
+        var elTime = document.getElementById("timestamp");
 
         setInterval(function() {
-          date = new Date();
-
-          serverTime = serverTime+1;
-
-          date.setTime(serverTime*1000);
-          time = date.toLocaleTimeString();
-          $("#timestamp").html(time);
+          serverTime += 1;
+          var d = new Date(serverTime * 1000);
+          var hh = ('0' + d.getHours()).slice(-2);
+          var mm = ('0' + d.getMinutes()).slice(-2);
+          var ss = ('0' + d.getSeconds()).slice(-2);
+          if (elTime) elTime.textContent = hh + ':' + mm + ':' + ss + ' WIB';
         }, 1000);
 
         $('#modal-password').on('shown.bs.modal', function (e) {

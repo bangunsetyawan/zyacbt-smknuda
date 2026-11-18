@@ -33,11 +33,11 @@
 							</div>
 						</div>
 						<div class="form-group">
-							<label class="col-sm-4 control-label">Keterangan</label>
+							<label class="col-sm-4 control-label">Keterangan / Nama Kegiatan Ujian</label>
                             <div class="col-sm-8">
 								<input type="text" class="form-control input-sm" id="zyacbt-keterangan" name="zyacbt-keterangan" >
                                 <p class="help-block">
-									Keterangan Pelaksana bisa diisi dengan Slogan ataupun Alamat dari Organisasi.
+									Nama Kegiatan Ujian yang tampil di halaman Login Peserta (contoh: <b>Penilaian Tengah Semester (PTS) Ganjil 2026/2027</b> atau <b>Sumatif Akhir Semester (SAS)</b>).
 								</p>
 							</div>
 						</div>

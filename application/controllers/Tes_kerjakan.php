@@ -440,26 +440,18 @@ class Tes_kerjakan extends Tes_Controller {
                         if(!empty($soal->tessoal_change_time)){
                             if($soal->tessoal_ragu==0){
                                 // Jika soal tidak ragu-ragu
-                                $data_soal = $data_soal.'<button id="btn-soal-'.$soal->tessoal_order.'" onclick="soal(\''.$soal->tessoal_id.'\')" class="btn btn-primary" style="margin-bottom: 5px;" title="Soal ke '.$soal->tessoal_order.'">'.$soal->tessoal_order.'</button>
-
-                                ';
+                                $data_soal = $data_soal.'<button id="btn-soal-'.$soal->tessoal_order.'" onclick="soal(\''.$soal->tessoal_id.'\')" class="btn btn-primary cbt-num-btn" title="Soal ke '.$soal->tessoal_order.'">'.$soal->tessoal_order.'</button>';
                             }else{
                                 // Jika soal ragu-ragu
-                                $data_soal = $data_soal.'<button id="btn-soal-'.$soal->tessoal_order.'" onclick="soal(\''.$soal->tessoal_id.'\')" class="btn btn-warning" style="margin-bottom: 5px;" title="Soal ke '.$soal->tessoal_order.'">'.$soal->tessoal_order.'</button>
-
-                                ';
+                                $data_soal = $data_soal.'<button id="btn-soal-'.$soal->tessoal_order.'" onclick="soal(\''.$soal->tessoal_id.'\')" class="btn btn-warning cbt-num-btn" title="Soal ke '.$soal->tessoal_order.'">'.$soal->tessoal_order.'</button>';
                             }
                         }else{
                             if($soal->tessoal_ragu==0){
                                 // Jika soal tidak ragu-ragu
-                                $data_soal = $data_soal.'<button id="btn-soal-'.$soal->tessoal_order.'" onclick="soal(\''.$soal->tessoal_id.'\')" class="btn btn-default" style="margin-bottom: 5px;" title="Soal ke '.$soal->tessoal_order.'">'.$soal->tessoal_order.'</button>
-
-                                ';
+                                $data_soal = $data_soal.'<button id="btn-soal-'.$soal->tessoal_order.'" onclick="soal(\''.$soal->tessoal_id.'\')" class="btn btn-default cbt-num-btn" title="Soal ke '.$soal->tessoal_order.'">'.$soal->tessoal_order.'</button>';
                             }else{
                                 // Jika soal ragu-ragu
-                                $data_soal = $data_soal.'<button id="btn-soal-'.$soal->tessoal_order.'" onclick="soal(\''.$soal->tessoal_id.'\')" class="btn btn-warning" style="margin-bottom: 5px;" title="Soal ke '.$soal->tessoal_order.'">'.$soal->tessoal_order.'</button>
-
-                                ';
+                                $data_soal = $data_soal.'<button id="btn-soal-'.$soal->tessoal_order.'" onclick="soal(\''.$soal->tessoal_id.'\')" class="btn btn-warning cbt-num-btn" title="Soal ke '.$soal->tessoal_order.'">'.$soal->tessoal_order.'</button>';
                             }
                         }
                     }
@@ -540,51 +532,42 @@ class Tes_kerjakan extends Tes_Controller {
                         }
                     }
 
-                    $soal = $soal.'<hr />';
+                    $soal = '<div class="cbt-question-stem">'.$soal.'</div>';
 
                     $data['tes_soal_nomor'] = $query_soal->tessoal_order;
 
-                    $soal = $soal.'<div class="form-group">';
+                    $soal = $soal.'<div class="cbt-options-list">';
                     if($query_soal->soal_tipe==1){
                         $query_jawaban = $this->cbt_tes_soal_jawaban_model->get_by_tessoal($query_soal->tessoal_id);
                         if($query_jawaban->num_rows()>0){
                             $query_jawaban = $query_jawaban->result();
+                            $abjad = array('A', 'B', 'C', 'D', 'E', 'F', 'G', 'H');
+                            $idx = 0;
                             foreach ($query_jawaban as $jawaban) {
                                 // mengganti [baseurl] ke alamat sesungguhnya pada tag img / gambars
                                 $temp_jawaban = $jawaban->jawaban_detail;
                                 $temp_jawaban = str_replace("[base_url]", base_url(), $temp_jawaban);
+                                $huruf = isset($abjad[$idx]) ? $abjad[$idx] : ($idx + 1);
+                                $idx++;
 
                                 if($jawaban->soaljawaban_selected==1){
-                                    $soal = $soal.'<div class="radio"><label><input type="radio" onchange="jawab()" name="soal-jawaban" value="'.$jawaban->soaljawaban_jawaban_id.'" checked> '.$temp_jawaban.'</label></div>';
+                                    $soal = $soal.'<label class="cbt-opt-card is-selected"><input type="radio" onchange="jawab()" name="soal-jawaban" value="'.$jawaban->soaljawaban_jawaban_id.'" checked><span class="cbt-opt-letter">'.$huruf.'</span><div class="cbt-opt-text">'.$temp_jawaban.'</div></label>';
                                 }else{
-                                    $soal = $soal.'<div class="radio"><label><input type="radio" onchange="jawab()" name="soal-jawaban" value="'.$jawaban->soaljawaban_jawaban_id.'" > '.$temp_jawaban.'</label></div>';
+                                    $soal = $soal.'<label class="cbt-opt-card"><input type="radio" onchange="jawab()" name="soal-jawaban" value="'.$jawaban->soaljawaban_jawaban_id.'" ><span class="cbt-opt-letter">'.$huruf.'</span><div class="cbt-opt-text">'.$temp_jawaban.'</div></label>';
                                 }
                             }
                         }
                     }else if($query_soal->soal_tipe==2){
-                        if(!empty($query_soal->tessoal_jawaban_text)){
-                            $soal = $soal.'<textarea class="textarea" id="soal-jawaban" name="soal-jawaban" style="width: 100%; height: 150px; font-size: 13px; line-height: 25px; border: 1px solid #dddddd; padding: 10px;">'.$query_soal->tessoal_jawaban_text.'</textarea>
-                                <button type="button" onclick="jawab()" class="btn btn-default" style="margin-bottom: 5px;" title="Simpan Jawaban">Simpan Jawaban</button>
-                                ';
-                        }else{
-                            $soal = $soal.'<textarea class="textarea" id="soal-jawaban" name="soal-jawaban" style="width: 100%; height: 150px; font-size: 13px; line-height: 25px; border: 1px solid #dddddd; padding: 10px;"></textarea>
-                                <button type="button" onclick="jawab()" class="btn btn-default" style="margin-bottom: 5px;" title="Simpan Jawaban">Simpan Jawaban</button>
-                                ';
-                        }
+                        $val_text = !empty($query_soal->tessoal_jawaban_text) ? $query_soal->tessoal_jawaban_text : '';
+                        $soal = $soal.'<textarea class="form-control cbt-essay-input" id="soal-jawaban" name="soal-jawaban" placeholder="Ketik jawaban uraian Anda di sini...">'.$val_text.'</textarea>
+                            <button type="button" onclick="jawab()" class="btn btn-success btn-block cbt-btn-save-essay"><i class="fa fa-save"></i> SIMPAN JAWABAN URAIAN</button>
+                            ';
                     }else if($query_soal->soal_tipe==3){
-                        if(!empty($query_soal->tessoal_jawaban_text)){
-                            $soal = $soal.'
-                                <input type="text" class="form-control" style="max-width: 500px;" id="soal-jawaban" name="soal-jawaban" value="'.$query_soal->tessoal_jawaban_text.'" autocomplete="off" />
-                                <br />
-                                <button type="button" onclick="jawab()" class="btn btn-default" style="margin-bottom: 5px;" title="Simpan Jawaban">Simpan Jawaban</button>
-                                ';
-                        }else{
-                            $soal = $soal.'
-                                <input type="text" class="form-control" style="max-width: 500px;" id="soal-jawaban" name="soal-jawaban" autocomplete="off" />
-                                <br />
-                                <button type="button" onclick="jawab()" class="btn btn-default" style="margin-bottom: 5px;" title="Simpan Jawaban">Simpan Jawaban</button>
-                                ';
-                        }
+                        $val_text = !empty($query_soal->tessoal_jawaban_text) ? htmlspecialchars($query_soal->tessoal_jawaban_text, ENT_QUOTES, 'UTF-8') : '';
+                        $soal = $soal.'
+                            <input type="text" class="form-control cbt-short-input" id="soal-jawaban" name="soal-jawaban" value="'.$val_text.'" placeholder="Ketik jawaban singkat Anda..." autocomplete="off" />
+                            <button type="button" onclick="jawab()" class="btn btn-success btn-block cbt-btn-save-essay"><i class="fa fa-save"></i> SIMPAN JAWABAN</button>
+                            ';
                     }
                     $soal = $soal.'</div>';
 

@@ -12,9 +12,9 @@ class Welcome extends CI_Controller {
 	function __construct(){
 		parent:: __construct();
 		$this->load->model('cbt_konfigurasi_model');
+		$this->load->model('cbt_tes_model');
 		$this->load->library('access_tes');
 		$this->load->library('user_agent');
-		$this->load->model('cbt_konfigurasi_model');
 	}
     
 	public function index(){
@@ -46,6 +46,12 @@ class Welcome extends CI_Controller {
 						$query_konfigurasi = $this->cbt_konfigurasi_model->get_by_kolom_limit('konfigurasi_kode', 'cbt_keterangan', 1);
 						if($query_konfigurasi->num_rows()>0){
 							$data['cbt_keterangan'] = $query_konfigurasi->row()->konfigurasi_isi;
+						}
+
+						$data['tes_aktif'] = array();
+						$query_tes_aktif = $this->cbt_tes_model->get_by_now();
+						if($query_tes_aktif->num_rows()>0){
+							$data['tes_aktif'] = $query_tes_aktif->result();
 						}
 						
 						$this->template->display_user($this->kelompok.'/welcome_view', 'Selamat Datang', $data);

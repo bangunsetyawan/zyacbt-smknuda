@@ -47,7 +47,58 @@
     <script src="<?php echo base_url(); ?>public/plugins/iCheck/icheck.min.js" type="text/javascript"></script>
 
     <script src="<?php echo base_url(); ?>public/app.js" type="text/javascript"></script>
-    
+    <style type="text/css">
+      .main-header .navbar {
+        min-height: 54px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+      }
+      .cbt-topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 54px;
+        padding: 0 18px;
+        width: 100%;
+      }
+      .cbt-topbar::before,
+      .cbt-topbar::after {
+        display: none !important;
+        content: none !important;
+      }
+      .cbt-brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #fff !important;
+        text-decoration: none !important;
+        font-size: 19px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        line-height: 1;
+        white-space: nowrap;
+      }
+      .cbt-clock-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        background: rgba(0, 0, 0, 0.22);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        color: #fff;
+        padding: 6px 13px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 700;
+        font-family: monospace;
+        letter-spacing: 0.5px;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+      @media (max-width: 480px) {
+        .cbt-topbar { padding: 0 14px; }
+        .cbt-brand { font-size: 18px; }
+        .cbt-clock-badge { font-size: 13px; padding: 5px 11px; }
+      }
+    </style>
   </head>
   <!-- ADD THE CLASS layout-top-nav TO REMOVE THE SIDEBAR. -->
   <body class="skin-green layout-top-nav">
@@ -55,17 +106,13 @@
 
       <header class="main-header">               
         <nav class="navbar navbar-static-top">
-          <div class="container">
-            <div class="navbar-header">
-              <a href="<?php echo base_url(); ?>" class="navbar-brand" style="display: flex; align-items: center; gap: 8px; padding-top: 10px; padding-bottom: 10px;">
-                <img src="<?php echo base_url(); ?>logo-smk.png" alt="Logo SMK NU Darussalam" style="height: 30px; width: auto;" />
-                <b><?php if(!empty($site_name)){ echo $site_name; } ?></b>
-              </a>
-            </div>
-            <div class="navbar-custom-menu">
-              <ul class="nav navbar-nav">
-                <li><a href="#"><span id="timestamp"></span></a></li>
-              </ul>
+          <div class="container cbt-topbar">
+            <a href="<?php echo base_url(); ?>" class="cbt-brand">
+              <b>ZYA CBT</b>
+            </a>
+            <div class="cbt-clock-badge" title="Waktu Server">
+              <i class="fa fa-clock-o"></i>
+              <span id="timestamp"><?php echo date('H:i:s', !empty($timestamp) ? $timestamp : time()); ?> WIB</span>
             </div>
           </div><!-- /.container-fluid -->
         </nav>
@@ -114,18 +161,16 @@
 
   <script type="text/javascript">
     $(function () {
-        var serverTime = <?php if(!empty($timestamp)){ echo $timestamp; } ?>;
-        var counterTime=0;
-        var date;
+        var serverTime = <?php echo !empty($timestamp) ? (int)$timestamp : time(); ?>;
+        var elTime = document.getElementById("timestamp");
 
         setInterval(function() {
-          date = new Date();
-
-          serverTime = serverTime+1;
-
-          date.setTime(serverTime*1000);
-          time = date.toLocaleTimeString();
-          $("#timestamp").html(time);
+          serverTime += 1;
+          var d = new Date(serverTime * 1000);
+          var hh = ('0' + d.getHours()).slice(-2);
+          var mm = ('0' + d.getMinutes()).slice(-2);
+          var ss = ('0' + d.getSeconds()).slice(-2);
+          if (elTime) elTime.textContent = hh + ':' + mm + ':' + ss + ' WIB';
         }, 1000);
     });
   </script>

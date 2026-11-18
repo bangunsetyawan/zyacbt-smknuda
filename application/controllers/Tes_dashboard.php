@@ -32,9 +32,14 @@ class Tes_dashboard extends Tes_Controller {
         $data['timestamp'] = strtotime(date('Y-m-d H:i:s'));
 
         $username = $this->access_tes->get_username();
+        $data['username'] = $username;
+        $user_id = 0;
+        $data['user_detail'] = '';
 		$query_user = $this->cbt_user_model->get_by_kolom_limit('user_name', $username, 1);
 		if($query_user->num_rows()>0){
-			$user_id = $query_user->row()->user_id;
+			$user_row = $query_user->row();
+			$user_id = $user_row->user_id;
+			$data['user_detail'] = $user_row->user_detail;
 			$query_tes = $this->cbt_tes_user_model->get_by_user_status($user_id);
 			if($query_tes->num_rows()>0){
 				$query_tes = $query_tes->result();
@@ -51,6 +56,116 @@ class Tes_dashboard extends Tes_Controller {
 				}
 			}
 		}
+
+		// Ambil seluruh daftar jadwal tes hari ini untuk grup siswa (untuk tampilan Card Mobile / PWA)
+		$grup_id = 0;
+		$query_grup = $this->cbt_user_grup_model->get_by_kolom_limit('grup_nama', $data['group'], 1);
+		if($query_grup->num_rows()>0){
+			$grup_id = $query_grup->row()->grup_id;
+		}
+		$daftar_tes = array();
+		$query_daftar = $this->cbt_tesgrup_model->get_jadwal_hari_ini($grup_id);
+		if($query_daftar->num_rows()>0){
+			$now_dt = new DateTime();
+			foreach($query_daftar->result() as $temp){
+				$query_topik_set = $this->cbt_tes_topik_set_model->get_by_kolom('tset_tes_id', $temp->tes_id);
+				if($query_topik_set->num_rows() > 0){
+					$total_soal = 0;
+					$has_pg = false;
+					$has_essay = false;
+					foreach($query_topik_set->result() as $tset){
+						$total_soal += (int)$tset->tset_jumlah;
+						if((int)$tset->tset_tipe === 1){
+							$has_pg = true;
+						}elseif((int)$tset->tset_tipe === 2 || (int)$tset->tset_tipe === 3){
+							$has_essay = true;
+						}else{
+							// tset_tipe == 0 (Semua tipe) -> cek dari nama tes
+							if(preg_match('/\b(esai|essay|uraian)\b/i', $temp->tes_nama)){
+								$has_essay = true;
+							}else{
+								$has_pg = true;
+							}
+						}
+					}
+
+					$item = new stdClass();
+					$item->tes_id = $temp->tes_id;
+					$item->tes_nama = $temp->tes_nama;
+					$item->tes_detail = $temp->tes_detail;
+					$item->tes_begin_time = $temp->tes_begin_time;
+					$item->tes_end_time = $temp->tes_end_time;
+					$item->tes_duration_time = $temp->tes_duration_time;
+					$item->total_soal = $total_soal;
+
+					if($has_essay && !$has_pg){
+						$item->exam_category = 'essay';
+						$item->category_label = 'SOAL ESAI / URAIAN';
+						$item->category_icon = 'fa-pencil-square-o';
+					}elseif($has_essay && $has_pg){
+						$item->exam_category = 'mixed';
+						$item->category_label = 'PILIHAN GANDA & ESAI';
+						$item->category_icon = 'fa-files-o';
+					}else{
+						$item->exam_category = 'pg';
+						$item->category_label = 'PILIHAN GANDA';
+						$item->category_icon = 'fa-list-ul';
+					}
+
+					$begin_dt = new DateTime($temp->tes_begin_time);
+					$end_dt = new DateTime($temp->tes_end_time);
+
+					$item->nilai = '';
+					$item->action_url = '';
+					$item->action_text = '';
+
+					if($this->cbt_tes_user_model->count_by_user_tes($user_id, $temp->tes_id)->row()->hasil > 0){
+						$query_test_user = $this->cbt_tes_user_model->get_by_user_tes($user_id, $temp->tes_id)->row();
+						$tanggal_tes = new DateTime($query_test_user->tesuser_creation_time);
+						$tanggal_tes->modify('+'.$temp->tes_duration_time.' minutes');
+
+						if($now_dt < $tanggal_tes && $query_test_user->tesuser_status != 4){
+							$item->status_label = 'Sedang Dikerjakan';
+							$item->status_type = 'ongoing';
+							$item->action_url = site_url().'/tes_kerjakan/index/'.$temp->tes_id;
+							$item->action_text = 'LANJUTKAN UJIAN';
+						}else{
+							$item->status_label = 'Selesai Dikerjakan';
+							$item->status_type = 'done';
+							if($temp->tes_results_to_users == 1){
+								$item->nilai = $this->cbt_tes_soal_model->get_nilai($query_test_user->tesuser_id)->row()->hasil;
+							}
+							if($temp->tes_detail_to_users == 1){
+								$item->action_url = site_url().'/tes_hasil_detail/index/'.$query_test_user->tesuser_id;
+								$item->action_text = 'LIHAT DETAIL HASIL';
+							}else{
+								$item->action_url = '';
+								$item->action_text = 'UJIAN TELAH SELESAI DIKERJAKAN';
+							}
+						}
+					}else{
+						if($now_dt < $begin_dt){
+							$item->status_label = 'Menunggu Jadwal';
+							$item->status_type = 'upcoming';
+							$item->action_url = '';
+							$item->action_text = 'BELUM DIBUKA — MULAI PUKUL ' . date('H:i', strtotime($temp->tes_begin_time)) . ' WIB';
+						}elseif($now_dt > $end_dt){
+							$item->status_label = 'Waktu Sesi Berakhir';
+							$item->status_type = 'expired';
+							$item->action_url = '';
+							$item->action_text = 'WAKTU SESI BERAKHIR (Hubungi Pengawas)';
+						}else{
+							$item->status_label = 'Belum Dikerjakan';
+							$item->status_type = 'ready';
+							$item->action_url = site_url().'/'.$this->url.'/konfirmasi_test/'.$temp->tes_id;
+							$item->action_text = ($item->exam_category === 'essay') ? 'KERJAKAN SOAL ESAI' : 'KERJAKAN PILIHAN GANDA';
+						}
+					}
+					$daftar_tes[] = $item;
+				}
+			}
+		}
+		$data['daftar_tes'] = $daftar_tes;
 		
 		$query_info = $this->cbt_konfigurasi_model->get_by_kolom_limit('konfigurasi_kode', 'cbt_informasi', 1);
 		if($query_info->num_rows()>0){
@@ -78,8 +193,9 @@ class Tes_dashboard extends Tes_Controller {
     			$query_tes = $query_tes->row();
 
     			$tanggal = new DateTime();
+    			$tanggal_begin = new DateTime($query_tes->tes_begin_time);
     			$tanggal_tes = new DateTime($query_tes->tes_end_time);
-    			if($tanggal<$tanggal_tes){
+    			if($tanggal >= $tanggal_begin && $tanggal < $tanggal_tes){
     				// Cek terlebih dahulu, apakah sudah pernah memulai tes
     				$username = $this->access_tes->get_username();
         			$user_id = $this->cbt_user_model->get_by_kolom_limit('user_name', $username, 1)->row()->user_id;
@@ -97,12 +213,10 @@ class Tes_dashboard extends Tes_Controller {
 				        $data['tes_max_score'] = $query_tes->tes_max_score;
 				        if($query_tes->tes_token==1){
 				        	$data['tes_token'] = '
-				        		<tr style="height: 45px;">
-		                            <td></td>
-		                            <td style="vertical-align: middle;text-align: right;">Token : </td>
-		                            <td style="vertical-align: middle;"><input type="text" name="token" id="token" autocomplete="off"></td>
-		                            <td></td>
-		                        </tr>
+				        		<div class="cbt-token-box">
+				        			<label for="token">MASUKKAN TOKEN UJIAN</label>
+				        			<input type="text" name="token" id="token" class="form-control cbt-token-input" placeholder="Ketik Token dari Pengawas" autocomplete="off" style="text-transform: uppercase;">
+				        		</div>
 				        	';
 				        }else{
 				        	$data['tes_token'] = '<input type="hidden" name="token" id="token">';

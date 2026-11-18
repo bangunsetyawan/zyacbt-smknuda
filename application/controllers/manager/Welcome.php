@@ -11,6 +11,7 @@ class Welcome extends CI_Controller {
             }else{
                 if(!$this->access->is_login()){
 					$data['link_login_operator'] = "tidak";
+					$data['timestamp'] = strtotime(date('Y-m-d H:i:s'));
                     $this->template->display_user('manager/welcome_view', 'Login', $data);
         		}else{
                     redirect('manager/dashboard');

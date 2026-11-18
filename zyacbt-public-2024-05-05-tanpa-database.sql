@@ -98,7 +98,7 @@ CREATE TABLE `cbt_konfigurasi` (
 INSERT INTO `cbt_konfigurasi` (`konfigurasi_id`, `konfigurasi_kode`, `konfigurasi_isi`, `konfigurasi_keterangan`) VALUES
 (1, 'link_login_operator', 'ya', 'Menampilkan Link Login Operator'),
 (2, 'cbt_nama', 'SMK NU Darussalam', 'Nama Penyelenggara ZYACBT'),
-(3, 'cbt_keterangan', 'Ujian Online Berbasis Komputer SMK NU Darussalam', 'Keterangan Penyelenggara ZYACBT'),
+(3, 'cbt_keterangan', 'Ujian Online Berbasis Komputer', 'Keterangan Penyelenggara ZYACBT'),
 (4, 'cbt_mobile_lock_xambro', 'tidak', 'Melakukan Lock pada browser mobile agar menggunakan Xambro Saja'),
 (5, 'cbt_informasi', '<p>Silahkan pilih Tes yang diikuti dari daftar tes yang tersedia dibawah ini. Apabila tes tidak muncul, silahkan menghubungi Operator yang bertugas.</p>\r\n', 'Informasi yang diberika di Dashboard peserta tes\''),
 (6, 'proteksi_multilogin', 'tidak', 'Proteksi MultiLogin Peserta Tes');

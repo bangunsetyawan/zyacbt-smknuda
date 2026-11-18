@@ -1,53 +1,144 @@
-<div class="container">
-	<!-- Content Header (Page header) -->
-    <section class="content-header">
-    	<h1>
-    		<?php if(!empty($site_name)){ echo $site_name; } ?>
-            <small><?php if(!empty($cbt_keterangan)){ echo $cbt_keterangan; }else{ echo 'Ujian Online Berbasis Komputer'; } ?></small>
-        </h1>
-        <ol class="breadcrumb">
-        	<li><a href="#"><i class="fa fa-dashboard"></i> Home</a></li>
-            <li class="active">Selamat Datang</li>
-        </ol>
-	</section>
+<style type="text/css">
+	.cbt-login-wrap {
+		max-width: 420px;
+		margin: 10px auto 30px auto;
+		padding: 0 12px;
+	}
+	.cbt-login-header {
+		text-align: center;
+		margin-bottom: 18px;
+	}
+	.cbt-login-header img {
+		height: 86px;
+		width: auto;
+		display: block;
+		margin: 0 auto 12px auto;
+	}
+	.cbt-login-title {
+		font-size: 22px;
+		font-weight: 800;
+		color: #1f2d3d;
+		letter-spacing: 0.5px;
+		text-transform: uppercase;
+		line-height: 1.25;
+		margin: 0;
+	}
+	.cbt-event-badge {
+		margin-top: 10px;
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		background: #e8f8f0;
+		border: 1.5px solid #8fd9b6;
+		color: #00733e;
+		border-radius: 8px;
+		padding: 8px 16px;
+		font-size: 14.5px;
+		font-weight: 800;
+		line-height: 1.35;
+		box-shadow: 0 2px 6px rgba(0, 166, 90, 0.08);
+	}
+	.cbt-login-card {
+		background: #ffffff;
+		border-top: 4px solid #00a65a;
+		border-radius: 10px;
+		box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+		padding: 26px 22px;
+	}
+	.cbt-login-card-title {
+		text-align: center;
+		font-weight: 700;
+		font-size: 17px;
+		color: #333;
+		margin: 0 0 18px 0;
+	}
+	.cbt-input-group {
+		position: relative;
+		margin-bottom: 16px;
+	}
+	.cbt-input-group .form-control {
+		height: 50px;
+		font-size: 17px;
+		font-weight: 600;
+		padding: 10px 44px 10px 16px;
+		border-radius: 8px;
+		border: 1.5px solid #cfd8dc;
+		box-shadow: none;
+		transition: border-color 0.2s, box-shadow 0.2s;
+	}
+	.cbt-input-group .form-control:focus {
+		border-color: #00a65a;
+		box-shadow: 0 0 0 3px rgba(0, 166, 90, 0.15);
+	}
+	.cbt-input-group .form-control-feedback {
+		width: 44px;
+		height: 50px;
+		line-height: 50px !important;
+		font-size: 17px;
+		color: #78909c;
+	}
+	.cbt-login-actions {
+		margin-top: 18px;
+	}
+	.cbt-show-pass {
+		margin-bottom: 16px;
+		font-size: 15px;
+		color: #455a64;
+	}
+	.cbt-btn-submit {
+		height: 50px;
+		font-size: 17px;
+		font-weight: 700;
+		letter-spacing: 0.5px;
+		border-radius: 8px !important;
+		box-shadow: 0 4px 10px rgba(0, 166, 90, 0.25);
+	}
+</style>
 
+<div class="container">
 	<!-- Main content -->
-    <section class="content">
-    	<div class="row">
-    	<?php echo form_open('welcome/login','id="form-login" class="form-horizontal"')?>
-    	</div>
-    	<div class="row">
-    		<div class="login-box">
-    			<div class="login-logo" style="margin-bottom: 15px;">
-    				<img src="<?php echo base_url(); ?>logo-smk.png" alt="Logo SMK NU Darussalam" style="height: 80px; width: auto; display: block; margin: 0 auto 10px auto;" />
-        			<b>Login Peserta</b>
-        			<div style="font-size: 16px; color: #555; margin-top: 2px;">SMK NU Darussalam</div>
-      			</div><!-- /.login-logo -->
-      			<div class="login-box-body" style="border-top: 3px solid #00a65a; border-radius: 4px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);">
-        			<p class="login-box-msg">Masukkan Username dan Password Peserta</p>
+    <section class="content" style="padding-top: 20px;">
+    	<?php echo form_open('welcome/login','id="form-login"')?>
+    	<div class="cbt-login-wrap">
+    		<div class="cbt-login-header">
+    			<img src="<?php echo base_url(); ?>logo-smk.png" alt="Logo SMK NU Darussalam" />
+        		<h1 class="cbt-login-title">CBT SMK NU DARUSSALAM</h1>
+
+        		<?php if(!empty($cbt_keterangan)){ ?>
+        		<div class="cbt-event-badge">
+        			<i class="fa fa-calendar-check-o"></i>
+        			<span><?php echo htmlspecialchars($cbt_keterangan, ENT_QUOTES, 'UTF-8'); ?></span>
+        		</div>
+        		<?php } ?>
+      		</div>
+
+      		<div class="cbt-login-card">
+        		<p class="cbt-login-card-title">Login Peserta Ujian</p>
                 <div id="form-pesan"></div>
-          			<div class="form-group has-feedback">
-            			<input type="text" id="username" autocomplete="off" name="username" class="form-control" placeholder="Username"/>
-            			<span class="glyphicon glyphicon-user form-control-feedback"></span>
-          			</div>
-          		<div class="form-group has-feedback">
-            		<input type="password" id="password" autocomplete="off" name="password" class="form-control" placeholder="Password"/>
+
+          		<div class="cbt-input-group has-feedback">
+            		<input type="text" id="username" inputmode="numeric" autocomplete="off" name="username" class="form-control" placeholder="Nomor Peserta / Username"/>
+            		<span class="glyphicon glyphicon-user form-control-feedback"></span>
+          		</div>
+
+          		<div class="cbt-input-group has-feedback">
+            		<input type="password" id="password" inputmode="numeric" autocomplete="off" name="password" class="form-control" placeholder="Password"/>
             		<span class="glyphicon glyphicon-lock form-control-feedback"></span>
           		</div>
-          		<div class="row">
-		            <div class="col-xs-8">                          
-                  <div class="checkbox icheck">
-                    <label>
-                      <input type="checkbox" id="show-password"> Show Password
-                    </label>
-                  </div>    
-		            </div><!-- /.col -->
-		            <div class="col-xs-4">
-		              	<button type="submit" class="btn btn-success btn-block btn-flat">Login</button>
-		            </div><!-- /.col -->
+
+          		<div class="cbt-login-actions">
+                  	<div class="checkbox icheck cbt-show-pass">
+                    	<label>
+                      		<input type="checkbox" id="show-password"> &nbsp;Tampilkan Password
+                    	</label>
+                  	</div>
+		            <button type="submit" class="btn btn-success btn-block btn-flat cbt-btn-submit">
+		            	<i class="fa fa-sign-in"></i> &nbsp;MASUK UJIAN
+		            </button>
 	          	</div>
-    		</div><!-- /.login-box -->
+    		</div>
     	</div>
+    	</form>
     </section><!-- /.content -->
 </div><!-- /.container -->
 
