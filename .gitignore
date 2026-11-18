@@ -1,0 +1,29 @@
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Database & Docker volumes
+db_data/
+mysql_data/
+.docker/
+
+# User uploads (keep folder structure if needed, ignore uploaded content)
+uploads/*
+!uploads/.gitkeep
+
+# CodeIgniter logs & cache
+application/logs/*
+!application/logs/index.html
+application/cache/*
+!application/cache/index.html
+!application/cache/.htaccess
+
+# OS & Editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/

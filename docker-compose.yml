@@ -1,0 +1,59 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zyacbt-web
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8085}:80"
+    environment:
+      CI_ENV: ${CI_ENV:-development}
+      APP_BASE_URL: ${APP_BASE_URL:-}
+      DB_HOST: ${DB_HOST:-db}
+      DB_USER: ${DB_USER:-zyacbt}
+      DB_PASS: ${DB_PASS:-zyacbt123}
+      DB_NAME: ${DB_NAME:-zyacbtpublic}
+      TZ: ${TZ:-Asia/Jakarta}
+    volumes:
+      - ./:/var/www/html
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mariadb:10.11
+    container_name: zyacbt-db
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASS:-rootzyacbt123}
+      MARIADB_DATABASE: ${DB_NAME:-zyacbtpublic}
+      MARIADB_USER: ${DB_USER:-zyacbt}
+      MARIADB_PASSWORD: ${DB_PASS:-zyacbt123}
+      TZ: ${TZ:-Asia/Jakarta}
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./zyacbt-public-2024-05-05-dengan-database.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: zyacbt-pma
+    restart: unless-stopped
+    ports:
+      - "${PMA_PORT:-8086}:80"
+    environment:
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: ${DB_ROOT_PASS:-rootzyacbt123}
+      UPLOAD_LIMIT: 64M
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db_data:
