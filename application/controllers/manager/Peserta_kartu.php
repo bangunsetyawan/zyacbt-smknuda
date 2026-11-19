@@ -17,88 +17,121 @@ class Peserta_kartu extends Member_Controller {
     public function index(){
 		$data['kode_menu'] = $this->kode_menu;
         $data['url'] = $this->url;
-		
-		$query_group = $this->cbt_user_grup_model->get_group();
 
-        if($query_group->num_rows()>0){
-        	$select = '';
-        	$query_group = $query_group->result();
-        	foreach ($query_group as $temp) {
-        		$select = $select.'<option value="'.$temp->grup_id.'">'.$temp->grup_nama.'</option>';
-        	}
+        // Ambil semua kelas beserta jumlah pesertanya dalam 1 query
+        $sql_grup = "SELECT g.grup_id, g.grup_nama, COUNT(u.user_id) AS jml_peserta
+                     FROM cbt_user_grup g
+                     LEFT JOIN cbt_user u ON u.user_grup_id = g.grup_id
+                     GROUP BY g.grup_id, g.grup_nama
+                     ORDER BY g.grup_nama ASC";
+        $groups = $this->db->query($sql_grup)->result();
 
-        }else{
-        	$select = '<option value="0">KOSONG</option>';
+        $total_peserta = 0;
+        $select = '';
+        foreach($groups as $g){
+            $total_peserta += (int)$g->jml_peserta;
+        }
+        $select .= '<option value="semua">Semua Kelas ('.$total_peserta.' peserta)</option>';
+        foreach ($groups as $temp) {
+            $select .= '<option value="'.(int)$temp->grup_id.'">'.html_escape($temp->grup_nama).' ('.(int)$temp->jml_peserta.' peserta)</option>';
         }
         $data['select_group'] = $select;
+        $data['total_peserta'] = $total_peserta;
+
+        // Ambil daftar distinct Keterangan (Ruang/Sesi) untuk filter opsional
+        $details = $this->db->select('DISTINCT(user_detail) AS detail', FALSE)
+                            ->from('cbt_user')
+                            ->where('user_detail IS NOT NULL', NULL, FALSE)
+                            ->where("TRIM(user_detail) !=", '')
+                            ->order_by('user_detail', 'ASC')
+                            ->get()->result();
+        $data['details'] = $details;
+
+        // Ambil nama sekolah & keterangan kegiatan dari cbt_konfigurasi
+        $cbt_nama = 'SMK NU Darussalam';
+        $cbt_keterangan = 'Ujian Berbasis Komputer (CBT)';
+        $q_nama = $this->cbt_konfigurasi_model->get_by_kolom_limit('konfigurasi_kode', 'cbt_nama', 1);
+        if($q_nama->num_rows() > 0 && trim($q_nama->row()->konfigurasi_isi) !== ''){
+            $cbt_nama = trim($q_nama->row()->konfigurasi_isi);
+        }
+        $q_ket = $this->cbt_konfigurasi_model->get_by_kolom_limit('konfigurasi_kode', 'cbt_keterangan', 1);
+        if($q_ket->num_rows() > 0 && trim($q_ket->row()->konfigurasi_isi) !== ''){
+            $cbt_keterangan = trim($q_ket->row()->konfigurasi_isi);
+        }
+        $data['cbt_nama'] = $cbt_nama;
+        $data['cbt_keterangan'] = $cbt_keterangan;
 		
-        $this->template->display_admin($this->kelompok.'/peserta_kartu_view', 'Cetak Kartu Peserta', $data);
+        $this->template->display_admin($this->kelompok.'/peserta_kartu_view', 'Cetak Kartu Login', $data);
     }
 
 	/**
-	* Cetak kartu hanya untuk satu grup saja
-	*/
-    public function cetak_kartu($grup_id=null){
+	 * Cetak Kartu Login untuk satu kelas (grup_id) atau semua kelas ('semua')
+	 * Opsional GET: ?detail=...&judul=...&kertas=a4|f4
+	 */
+    public function cetak_kartu($grup_id = null){
 		$data['kode_menu'] = $this->kode_menu;
-		
-		$kartu = '<h3>Data Peserta Kosong</h3>';
-		if(!empty($grup_id)){
-			$query_user = $this->cbt_user_model->get_by_kolom('user_grup_id', $grup_id);
-			if($query_user->num_rows()>0){
-				$kartu = '';
-				$query_user = $query_user->result();
-				
-				$query_konfig = $this->cbt_konfigurasi_model->get_by_kolom_limit('konfigurasi_kode', 'cbt_nama', 1);
-				$cbt_nama = 'Computer Based-Test';
-				if($query_konfig->num_rows()>0){
-					$cbt_nama = $query_konfig->row()->konfigurasi_isi;
-				}
-				
-				$query_group = $this->cbt_user_grup_model->get_by_kolom_limit('grup_id', $grup_id, 1);
-				$group = 'NULL';
-				if($query_group->num_rows()>0){
-					$group = $query_group->row()->grup_nama;
-				}
-				
-				foreach($query_user AS $temp){
-					$kartu = $kartu.'
-						<div class="kartu">
-							<div class="header"><img src="'.base_url().'logo-smk.png" style="height: 22px; vertical-align: middle; margin-right: 6px;" />'.$cbt_nama.'</div>
-							<hr />
-							<table>
-								<tr>
-									<td width="95px">Nama</td>
-									<td width="5px">:</td>
-									<td width="210px">'.$temp->user_firstname.'</td>
-								</tr>
-								<tr>
-									<td>Username</td>
-									<td>:</td>
-									<td>'.$temp->user_name.'</td>
-								</tr>
-								<tr>
-									<td>Password</td>
-									<td>:</td>
-									<td>'.$temp->user_password.'</td>
-								</tr>
-								<tr>
-									<td>Grup</td>
-									<td>:</td>
-									<td>'.$group.'</td>
-								</tr>
-								<tr>
-									<td>Keterangan</td>
-									<td>:</td>
-									<td>'.$temp->user_detail.'</td>
-								</tr>
-							</table>
-						</div>
-					';
-				}
-			}
-		}
-		
-		$data['kartu'] = $kartu;
+
+        $detail_filter = trim((string)$this->input->get('detail', TRUE));
+        $judul_custom  = trim((string)$this->input->get('judul', TRUE));
+        $kertas        = strtolower(trim((string)$this->input->get('kertas', TRUE)));
+        if($kertas !== 'f4'){
+            $kertas = 'a4';
+        }
+
+        // Ambil konfigurasi penyelenggara
+        $cbt_nama = 'SMK NU Darussalam';
+        $q_nama = $this->cbt_konfigurasi_model->get_by_kolom_limit('konfigurasi_kode', 'cbt_nama', 1);
+        if($q_nama->num_rows() > 0 && trim($q_nama->row()->konfigurasi_isi) !== ''){
+            $cbt_nama = trim($q_nama->row()->konfigurasi_isi);
+        }
+
+        $cbt_keterangan = '';
+        if($judul_custom !== ''){
+            $cbt_keterangan = $judul_custom;
+        }else{
+            $q_ket = $this->cbt_konfigurasi_model->get_by_kolom_limit('konfigurasi_kode', 'cbt_keterangan', 1);
+            if($q_ket->num_rows() > 0 && trim($q_ket->row()->konfigurasi_isi) !== ''){
+                $cbt_keterangan = trim($q_ket->row()->konfigurasi_isi);
+            }
+        }
+
+        $peserta_list = array();
+        $label_filter = 'Semua Kelas';
+
+        if(!empty($grup_id)){
+            $gid = 0;
+            if($grup_id !== 'semua'){
+                $gid = (int)$grup_id;
+                $qg = $this->cbt_user_grup_model->get_by_kolom_limit('grup_id', $gid, 1);
+                if($qg->num_rows() > 0){
+                    $label_filter = 'Kelas '.$qg->row()->grup_nama;
+                }
+            }
+
+            $this->db->select('u.user_id, u.user_name, u.user_password, u.user_firstname, u.user_detail, g.grup_nama')
+                     ->from('cbt_user u')
+                     ->join('cbt_user_grup g', 'u.user_grup_id = g.grup_id', 'left');
+
+            if($grup_id !== 'semua'){
+                $this->db->where('u.user_grup_id', $gid);
+            }
+
+            if($detail_filter !== ''){
+                $this->db->where('u.user_detail', $detail_filter);
+                $label_filter .= ' &bull; '.$detail_filter;
+            }
+
+            $this->db->order_by('g.grup_nama', 'ASC')
+                     ->order_by('u.user_detail', 'ASC')
+                     ->order_by('u.user_firstname', 'ASC');
+            $peserta_list = $this->db->get()->result();
+        }
+
+        $data['cbt_nama']       = $cbt_nama;
+        $data['cbt_keterangan'] = $cbt_keterangan;
+        $data['peserta_list']   = $peserta_list;
+        $data['label_filter']   = $label_filter;
+        $data['kertas']         = $kertas;
 		
 		$this->load->view($this->kelompok.'/peserta_cetak_kartu_view', $data);
 	}

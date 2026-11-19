@@ -157,9 +157,11 @@ class Users_model extends CI_Model{
                 
                 $menu_child = '';
                 $menu_child_count = 0;
-                $hidden_menus = array('modul-import'); // Sembunyikan Import Soal Spreadsheet dari sidebar (zero DB mod)
+                $hidden_menus = array('modul-import', 'peserta-group'); // Sembunyikan menu redundan dari sidebar (zero DB mod)
                 $menu_label_overrides = array(
-                    'modul-topik' => 'Topik (Mata Pelajaran)'
+                    'modul-topik' => 'Topik (Mata Pelajaran)',
+                    'peserta-daftar' => 'Peserta & Kelas',
+                    'peserta-kartu' => 'Cetak Kartu Login'
                 );
                 if($result_child->num_rows()>0){
                     $menu_child = $menu_child.'<ul class="treeview-menu">';
