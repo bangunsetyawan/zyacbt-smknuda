@@ -711,6 +711,9 @@ class Modul_import_word extends Member_Controller {
 			return;
 		}
 
+		// Deteksi duplikat identik (MD5) & bedakan nama file yang sama antar folder
+		$this->_disambiguate_batch_results($results, $manifest, $ctx);
+
 		file_put_contents($batch_dir . '/manifest.json', json_encode(array(
 			'created_at' => time(),
 			'modul_id' => $ctx['modul_id'],
@@ -722,11 +725,20 @@ class Modul_import_word extends Member_Controller {
 		$total_jawaban = 0;
 		$total_gambar = 0;
 		$total_siap = 0;
+		$total_duplikat = 0;
+		$total_file_ada_esai = 0;
 		foreach ($results as $r) {
+			if (!empty($r['is_duplicate_content'])) {
+				$total_duplikat++;
+				continue;
+			}
 			$total_soal += $r['jumlah_soal'];
 			$total_esai += $r['jumlah_esai'];
 			$total_jawaban += $r['jumlah_jawaban'];
 			$total_gambar += $r['jumlah_gambar'];
+			if ($r['jumlah_esai'] > 0) {
+				$total_file_ada_esai++;
+			}
 			if ($r['status'] !== 'error') {
 				$total_siap++;
 			}
@@ -742,19 +754,24 @@ class Modul_import_word extends Member_Controller {
 		$status['summary'] = array(
 			'total_file' => count($results),
 			'total_siap' => $total_siap,
+			'total_duplikat' => $total_duplikat,
+			'total_file_ada_esai' => $total_file_ada_esai,
 			'total_soal' => $total_soal,
 			'total_esai' => $total_esai,
 			'total_jawaban' => $total_jawaban,
 			'total_gambar' => $total_gambar
 		);
 		$status['skipped_notes'] = $skipped_notes;
-		$status['pesan'] = 'Analisis selesai: ' . count($results) . ' file diperiksa.';
+		$status['pesan'] = 'Analisis selesai: ' . count($results) . ' file diperiksa' . ($total_duplikat > 0 ? ' (' . $total_duplikat . ' file duplikat identik dilewati otomatis).' : '.');
 
 		echo json_encode($status);
 	}
 
 	/**
-	 * Batch Upload Soal (.docx / .zip) — Tahap 2: Eksekusi Simpan ke Bank Soal
+	 * Batch Upload Soal (.docx / .doc / .zip) — Tahap 2: Eksekusi Simpan ke Bank Soal
+	 * Mode:
+	 *  - pg_esai (default): PG ke topik utama, Esai otomatis ke topik terpisah berawalan "Esai "
+	 *  - pg_only          : Hanya import Pilihan Ganda, abaikan tabel Esai
 	 */
 	public function batch_simpan() {
 		$status = array('status' => 0, 'pesan' => '');
@@ -786,6 +803,13 @@ class Modul_import_word extends Member_Controller {
 		$target_topik_map = $this->input->post('target_topik');
 		$new_topik_map = $this->input->post('new_topik_name');
 
+		// Support import_mode ('pg_esai' | 'pg_only') + fallback include_esai
+		$import_mode = trim((string) $this->input->post('import_mode', true));
+		if ($import_mode === '') {
+			$import_mode = ($this->input->post('include_esai') === '0') ? 'pg_only' : 'pg_esai';
+		}
+		$include_esai = ($import_mode !== 'pg_only');
+
 		if (empty($selected_indices) || !is_array($selected_indices)) {
 			$status['pesan'] = 'Pilih minimal satu file yang akan diimport.';
 			echo json_encode($status);
@@ -806,7 +830,8 @@ class Modul_import_word extends Member_Controller {
 		}
 
 		$reports = array();
-		$grand_soal = 0;
+		$grand_pg = 0;
+		$grand_esai = 0;
 		$grand_jawaban = 0;
 		$grand_gambar = 0;
 		$grand_topik_baru = 0;
@@ -828,96 +853,166 @@ class Modul_import_word extends Member_Controller {
 				continue;
 			}
 
-			$target_val = isset($target_topik_map[$idx]) ? trim((string) $target_topik_map[$idx]) : '';
-			$target_topik_id = 0;
-			$target_topik_nama = '';
-			$created_new_topic = false;
-
-			if ($target_val === '__NEW__') {
-				if (!$ctx['can_create_topik'] || empty($ctx['modul_id'])) {
-					$reports[] = array(
-						'filename' => $mf['original_name'],
-						'status' => 'error',
-						'pesan' => 'Akun ini tidak diizinkan membuat topik baru.'
-					);
-					continue;
-				}
-				$candidate_name = isset($new_topik_map[$idx]) ? trim((string) $new_topik_map[$idx]) : '';
-				if ($candidate_name === '') {
-					$candidate_name = $mf['clean_name'];
-				}
-				$candidate_name = substr($candidate_name, 0, 250);
-
-				// Cek jika topik dengan nama sama persis sudah ada di modul aktif (hindari duplikat)
-				$existing = $this->db->where('topik_modul_id', $ctx['modul_id'])
-					->where('topik_nama', $candidate_name)
-					->limit(1)
-					->get('cbt_topik');
-				if ($existing->num_rows() > 0) {
-					$row_t = $existing->row();
-					$target_topik_id = intval($row_t->topik_id);
-					$target_topik_nama = $row_t->topik_nama;
-				} else {
-					$data_topik = array(
-						'topik_modul_id' => $ctx['modul_id'],
-						'topik_nama' => $candidate_name,
-						'topik_detail' => 'Topik ' . $candidate_name,
-						'topik_aktif' => 1
-					);
-					$this->cbt_topik_model->save($data_topik);
-					$target_topik_id = intval($this->db->insert_id());
-					$target_topik_nama = $candidate_name;
-					$allowed_topic_ids[$target_topik_id] = true;
-					$topic_names_by_id[$target_topik_id] = $candidate_name;
-					$created_new_topic = true;
-					$grand_topik_baru++;
-				}
-			} else {
-				$target_topik_id = intval($target_val);
-				if ($target_topik_id <= 0 || !isset($allowed_topic_ids[$target_topik_id])) {
-					$reports[] = array(
-						'filename' => $mf['original_name'],
-						'status' => 'error',
-						'pesan' => 'Topik tujuan belum dipilih atau tidak diizinkan.'
-					);
-					continue;
-				}
-				$target_topik_nama = $topic_names_by_id[$target_topik_id];
-			}
-
-			$include_esai = ($this->input->post('include_esai') !== '0');
 			$parsed = $this->_parse_word_file($filepath);
 			$pg_items = !empty($parsed['items']) ? $parsed['items'] : array();
 			$esai_items = ($include_esai && !empty($parsed['esai_items'])) ? $parsed['esai_items'] : array();
 
-			if (!$parsed['ok'] || (empty($pg_items) && empty($esai_items))) {
+			if (!$parsed['ok']) {
 				$reports[] = array(
 					'filename' => $mf['original_name'],
 					'status' => 'error',
-					'pesan' => !empty($parsed['error']) ? $parsed['error'] : 'Tidak ada soal valid.'
+					'pesan' => !empty($parsed['error']) ? $parsed['error'] : 'Gagal membaca file.'
+				);
+				continue;
+			}
+			if (empty($pg_items) && empty($esai_items)) {
+				$reports[] = array(
+					'filename' => $mf['original_name'],
+					'status' => 'error',
+					'pesan' => (!$include_esai && !empty($parsed['esai_items']))
+						? 'Dilewati: file ini hanya berisi soal Esai (mode Pilihan Ganda Saja aktif).'
+						: 'Tidak ada soal valid.'
 				);
 				continue;
 			}
 
-			// Ekstrak gambar jika ada (OOXML .docx atau base64 HTML .doc)
-			$upload_rel_path = $this->config->item('upload_path') . '/topik_' . $target_topik_id;
-			$img_map = array();
+			$target_val = isset($target_topik_map[$idx]) ? trim((string) $target_topik_map[$idx]) : '';
+			$raw_candidate = isset($new_topik_map[$idx]) ? trim((string) $new_topik_map[$idx]) : '';
+			if ($raw_candidate === '') {
+				$raw_candidate = $mf['clean_name'];
+			}
+
+			// Tentukan base nama topik untuk PG dan Esai
+			$base_topic_name = $raw_candidate;
+			if ($target_val !== '__NEW__') {
+				$tid_check = intval($target_val);
+				if ($tid_check > 0 && isset($topic_names_by_id[$tid_check])) {
+					$base_topic_name = $topic_names_by_id[$tid_check];
+				}
+			}
+
+			// 1. Resolve topik PG (hanya dibuat/dipakai jika ada soal PG)
+			$pg_topik_id = 0;
+			$pg_topik_nama = '';
+			$created_pg_topic = false;
+
+			if (!empty($pg_items)) {
+				if ($target_val === '__NEW__') {
+					if (!$ctx['can_create_topik'] || empty($ctx['modul_id'])) {
+						$reports[] = array(
+							'filename' => $mf['original_name'],
+							'status' => 'error',
+							'pesan' => 'Akun ini tidak diizinkan membuat topik baru.'
+						);
+						continue;
+					}
+					$res_pg_topic = $this->_find_or_create_topic_in_modul(
+						$ctx['modul_id'],
+						$raw_candidate,
+						'Topik ' . $raw_candidate,
+						$allowed_topic_ids,
+						$topic_names_by_id,
+						$grand_topik_baru
+					);
+					$pg_topik_id = $res_pg_topic['id'];
+					$pg_topik_nama = $res_pg_topic['nama'];
+					$created_pg_topic = $res_pg_topic['created'];
+					$base_topic_name = $pg_topik_nama;
+				} else {
+					$pg_topik_id = intval($target_val);
+					if ($pg_topik_id <= 0 || !isset($allowed_topic_ids[$pg_topik_id])) {
+						$reports[] = array(
+							'filename' => $mf['original_name'],
+							'status' => 'error',
+							'pesan' => 'Topik tujuan belum dipilih atau tidak diizinkan.'
+						);
+						continue;
+					}
+					$pg_topik_nama = $topic_names_by_id[$pg_topik_id];
+					$base_topic_name = $pg_topik_nama;
+				}
+			}
+
+			// 2. Resolve topik Esai terpisah (hanya dibuat/dipakai jika ada soal Esai & mode pg_esai)
+			$esai_topik_id = 0;
+			$esai_topik_nama = '';
+			$created_esai_topic = false;
+
+			if (!empty($esai_items)) {
+				$esai_candidate = $this->_build_esai_topic_name($base_topic_name);
+				if ($ctx['can_create_topik'] && !empty($ctx['modul_id'])) {
+					$res_esai_topic = $this->_find_or_create_topic_in_modul(
+						$ctx['modul_id'],
+						$esai_candidate,
+						'Soal Esai ' . $base_topic_name,
+						$allowed_topic_ids,
+						$topic_names_by_id,
+						$grand_topik_baru
+					);
+					$esai_topik_id = $res_esai_topic['id'];
+					$esai_topik_nama = $res_esai_topic['nama'];
+					$created_esai_topic = $res_esai_topic['created'];
+				} else {
+					// User dibatasi (opsi1): cari apakah topik Esai ada di daftar izinnya
+					foreach ($topic_names_by_id as $tid_allowed => $tnama_allowed) {
+						if (strtolower($tnama_allowed) === strtolower($esai_candidate)) {
+							$esai_topik_id = $tid_allowed;
+							$esai_topik_nama = $tnama_allowed;
+							break;
+						}
+					}
+					if ($esai_topik_id <= 0) {
+						if ($pg_topik_id > 0) {
+							// Fallback ke topik PG hanya untuk user terbatas yang tak boleh bikin topik baru
+							$esai_topik_id = $pg_topik_id;
+							$esai_topik_nama = $pg_topik_nama;
+						} else {
+							$reports[] = array(
+								'filename' => $mf['original_name'],
+								'status' => 'error',
+								'pesan' => 'Akun ini tidak diizinkan membuat topik Esai baru.'
+							);
+							continue;
+						}
+					}
+				}
+			}
+
+			// 3. Ekstrak gambar terpisah ke folder topik masing-masing
 			$saved_img_count = 0;
-			if (!empty($parsed['used_rids'])) {
-				$extract_res = $this->_extract_docx_images($filepath, $parsed['rels'], $parsed['used_rids'], $upload_rel_path);
-				$img_map = $extract_res['map'];
-				$saved_img_count = $extract_res['count'];
+			$pg_upload_path = ($pg_topik_id > 0) ? ($this->config->item('upload_path') . '/topik_' . $pg_topik_id) : '';
+			$esai_upload_path = ($esai_topik_id > 0) ? ($this->config->item('upload_path') . '/topik_' . $esai_topik_id) : '';
+
+			$pg_img_map = array();
+			if (!empty($pg_items) && !empty($parsed['used_rids'])) {
+				$pg_rids = $this->_collect_rids_from_items($pg_items);
+				if (!empty($pg_rids)) {
+					$ex_pg = $this->_extract_docx_images($filepath, $parsed['rels'], $pg_rids, $pg_upload_path);
+					$pg_img_map = $ex_pg['map'];
+					$saved_img_count += $ex_pg['count'];
+				}
+			}
+
+			$esai_img_map = array();
+			if (!empty($esai_items) && !empty($parsed['used_rids'])) {
+				$esai_rids = $this->_collect_rids_from_items($esai_items);
+				if (!empty($esai_rids)) {
+					$ex_esai = $this->_extract_docx_images($filepath, $parsed['rels'], $esai_rids, $esai_upload_path);
+					$esai_img_map = $ex_esai['map'];
+					$saved_img_count += $ex_esai['count'];
+				}
 			}
 
 			$this->db->trans_start();
 			$cnt_soal = 0;
 			$cnt_esai = 0;
 			$cnt_jawaban = 0;
+
 			foreach ($pg_items as $item) {
-				$soal_html = $this->_apply_image_placeholders($item['soal_html'], $img_map);
-				$soal_html = $this->_extract_base64_images_in_html($soal_html, $upload_rel_path, $saved_img_count);
+				$soal_html = $this->_apply_image_placeholders($item['soal_html'], $pg_img_map);
+				$soal_html = $this->_extract_base64_images_in_html($soal_html, $pg_upload_path, $saved_img_count);
 				$question = array(
-					'soal_topik_id' => $target_topik_id,
+					'soal_topik_id' => $pg_topik_id,
 					'soal_detail' => $soal_html,
 					'soal_tipe' => '1',
 					'soal_difficulty' => '1',
@@ -928,8 +1023,8 @@ class Modul_import_word extends Member_Controller {
 
 				if (!empty($item['jawaban'])) {
 					foreach ($item['jawaban'] as $jwb) {
-						$jwb_html = $this->_apply_image_placeholders($jwb['html'], $img_map);
-						$jwb_html = $this->_extract_base64_images_in_html($jwb_html, $upload_rel_path, $saved_img_count);
+						$jwb_html = $this->_apply_image_placeholders($jwb['html'], $pg_img_map);
+						$jwb_html = $this->_extract_base64_images_in_html($jwb_html, $pg_upload_path, $saved_img_count);
 						$data_jwb = array(
 							'jawaban_soal_id' => $soal_id,
 							'jawaban_benar' => intval($jwb['benar']),
@@ -943,10 +1038,10 @@ class Modul_import_word extends Member_Controller {
 			}
 
 			foreach ($esai_items as $eitem) {
-				$esai_html = $this->_apply_image_placeholders($eitem['soal_html'], $img_map);
-				$esai_html = $this->_extract_base64_images_in_html($esai_html, $upload_rel_path, $saved_img_count);
+				$esai_html = $this->_apply_image_placeholders($eitem['soal_html'], $esai_img_map);
+				$esai_html = $this->_extract_base64_images_in_html($esai_html, $esai_upload_path, $saved_img_count);
 				$question = array(
-					'soal_topik_id' => $target_topik_id,
+					'soal_topik_id' => $esai_topik_id,
 					'soal_detail' => $esai_html,
 					'soal_tipe' => '2',
 					'soal_difficulty' => '1',
@@ -965,15 +1060,19 @@ class Modul_import_word extends Member_Controller {
 				);
 			} else {
 				$berhasil_file++;
-				$grand_soal += ($cnt_soal + $cnt_esai);
+				$grand_pg += $cnt_soal;
+				$grand_esai += $cnt_esai;
 				$grand_jawaban += $cnt_jawaban;
 				$grand_gambar += $saved_img_count;
 				$reports[] = array(
 					'filename' => $mf['original_name'],
 					'status' => 'ok',
-					'topik_id' => $target_topik_id,
-					'topik_nama' => $target_topik_nama,
-					'created_new_topic' => $created_new_topic,
+					'topik_id' => $pg_topik_id,
+					'topik_nama' => $pg_topik_nama,
+					'created_new_topic' => $created_pg_topic,
+					'esai_topik_id' => $esai_topik_id,
+					'esai_topik_nama' => $esai_topik_nama,
+					'created_esai_topic' => $created_esai_topic,
 					'jumlah_soal' => $cnt_soal,
 					'jumlah_esai' => $cnt_esai,
 					'jumlah_jawaban' => $cnt_jawaban,
@@ -986,18 +1085,21 @@ class Modul_import_word extends Member_Controller {
 		// Bersihkan folder staging setelah eksekusi selesai
 		$this->_remove_dir_recursive($batch_dir);
 
+		$grand_total_soal = $grand_pg + $grand_esai;
 		$status['status'] = ($berhasil_file > 0) ? 1 : 0;
 		$status['reports'] = $reports;
 		$status['summary'] = array(
 			'berhasil_file' => $berhasil_file,
 			'total_dipilih' => count($selected_indices),
-			'total_soal' => $grand_soal,
+			'total_soal' => $grand_total_soal,
+			'total_pg' => $grand_pg,
+			'total_esai' => $grand_esai,
 			'total_jawaban' => $grand_jawaban,
 			'total_gambar' => $grand_gambar,
 			'total_topik_baru' => $grand_topik_baru
 		);
 		$status['pesan'] = ($berhasil_file > 0)
-			? 'Batch import selesai: ' . $berhasil_file . ' file, ' . $grand_soal . ' soal, ' . $grand_jawaban . ' opsi jawaban berhasil masuk ke Bank Soal.'
+			? 'Batch import selesai: ' . $berhasil_file . ' file (' . $grand_pg . ' PG' . ($grand_esai > 0 ? ' + ' . $grand_esai . ' Esai terpisah' : '') . ', ' . $grand_jawaban . ' opsi) berhasil masuk ke Bank Soal.'
 			: 'Tidak ada file yang berhasil diimport. Cek detail laporan di bawah.';
 
 		echo json_encode($status);
@@ -1066,6 +1168,10 @@ class Modul_import_word extends Member_Controller {
 	private function _analyze_staged_docx($index, $orig_name, $stored_name, $filepath, $ctx, $parent_dir = '') {
 		$clean_name = $this->_clean_filename_to_topic($orig_name, $parent_dir);
 		$display_name = ($parent_dir !== '') ? ('[' . $parent_dir . '] ' . $orig_name) : $orig_name;
+		$content_hash = @md5_file($filepath);
+		if ($content_hash === false) {
+			$content_hash = '';
+		}
 		$parsed = $this->_parse_word_file($filepath);
 		$match = $this->_match_topic($clean_name, $ctx['topics']);
 
@@ -1100,12 +1206,16 @@ class Modul_import_word extends Member_Controller {
 				'index' => $index,
 				'original_name' => $display_name,
 				'clean_name' => $clean_name,
+				'parent_dir' => $parent_dir,
+				'content_hash' => $content_hash,
 				'stored_file' => $stored_name
 			),
 			'preview' => array(
 				'index' => $index,
 				'filename' => $display_name,
 				'clean_name' => $clean_name,
+				'parent_dir' => $parent_dir,
+				'content_hash' => $content_hash,
 				'format_label' => !empty($parsed['format_label']) ? $parsed['format_label'] : strtoupper(pathinfo($orig_name, PATHINFO_EXTENSION)),
 				'jumlah_soal' => $parsed['jumlah_soal'],
 				'jumlah_esai' => $parsed['jumlah_esai'],
@@ -1116,9 +1226,159 @@ class Modul_import_word extends Member_Controller {
 				'status' => $file_status,
 				'warnings' => $warnings,
 				'suggested_topik' => $suggested_topik,
-				'match_type' => $match['match_type']
+				'match_type' => $match['match_type'],
+				'is_duplicate_content' => false,
+				'duplicate_of' => '',
+				'name_disambiguated' => false,
+				'default_checked' => ($file_status !== 'error')
 			)
 		);
+	}
+
+	private function _disambiguate_batch_results(&$results, &$manifest, $ctx) {
+		$seen_hashes = array();
+		$name_groups = array();
+
+		// Tahap 1: Deteksi duplikat identik (MD5 sama persis)
+		foreach ($results as $k => &$r) {
+			if ($r['status'] === 'error') {
+				$r['default_checked'] = false;
+				continue;
+			}
+			$hash = !empty($r['content_hash']) ? $r['content_hash'] : '';
+			if ($hash !== '' && isset($seen_hashes[$hash])) {
+				$r['is_duplicate_content'] = true;
+				$r['duplicate_of'] = $seen_hashes[$hash];
+				$r['default_checked'] = false;
+				if ($r['status'] === 'ok') {
+					$r['status'] = 'warning';
+				}
+				array_unshift(
+					$r['warnings'],
+					'Duplikat identik (100% sama) dengan ' . $seen_hashes[$hash] . ' — dilewati otomatis.'
+				);
+				continue;
+			}
+			if ($hash !== '') {
+				$seen_hashes[$hash] = $r['filename'];
+			}
+			$norm = $this->_normalize_name($r['clean_name']);
+			if ($norm !== '') {
+				if (!isset($name_groups[$norm])) {
+					$name_groups[$norm] = array();
+				}
+				$name_groups[$norm][] = $k;
+			}
+		}
+		unset($r);
+
+		// Tahap 2: Bedakan nama topik otomatis jika ada 2+ file beda isi tapi nama bersihnya sama
+		foreach ($name_groups as $norm => $idxs) {
+			if (count($idxs) <= 1) {
+				continue;
+			}
+			$used_norms = array();
+			foreach ($idxs as $k) {
+				$base_clean = $results[$k]['clean_name'];
+				$parent_dir = isset($results[$k]['parent_dir']) ? trim((string) $results[$k]['parent_dir']) : '';
+				$new_name = $base_clean;
+
+				if ($parent_dir !== '') {
+					$dir_clean = trim(preg_replace('/\s+/', ' ', str_replace('_', ' ', $parent_dir)));
+					$norm_dir = $this->_normalize_name($dir_clean);
+					if ($norm_dir !== '' && strpos($norm_dir, $norm) !== false) {
+						// Nama folder sudah memuat nama mapel (mis. "DINIYAH X" memuat "DINIYAH")
+						$new_name = $dir_clean;
+					} elseif ($dir_clean !== '') {
+						$new_name = $base_clean . ' - ' . $dir_clean;
+					}
+				}
+
+				$new_name = substr(trim($new_name), 0, 240);
+				$candidate_norm = $this->_normalize_name($new_name);
+				if (isset($used_norms[$candidate_norm])) {
+					$used_norms[$candidate_norm]++;
+					$new_name = substr($new_name, 0, 234) . ' (' . $used_norms[$candidate_norm] . ')';
+					$candidate_norm = $this->_normalize_name($new_name);
+				} else {
+					$used_norms[$candidate_norm] = 1;
+				}
+
+				$results[$k]['clean_name'] = $new_name;
+				$manifest[$k]['clean_name'] = $new_name;
+				$results[$k]['name_disambiguated'] = true;
+
+				// Cocokkan ulang secara exact agar tidak tertukar ke topik generik
+				$exact_match = $this->_match_topic($new_name, $ctx['topics'], true);
+				if ($exact_match['topik_id'] > 0) {
+					$results[$k]['suggested_topik'] = (string) $exact_match['topik_id'];
+					$results[$k]['match_type'] = $exact_match['match_type'];
+				} elseif ($ctx['can_create_topik']) {
+					$results[$k]['suggested_topik'] = '__NEW__';
+					$results[$k]['match_type'] = 'none';
+				}
+			}
+		}
+	}
+
+	private function _build_esai_topic_name($base_name) {
+		$base_name = trim(preg_replace('/\s+/', ' ', (string) $base_name));
+		if ($base_name === '') {
+			$base_name = 'Soal';
+		}
+		if (preg_match('/^esai\b/i', $base_name)) {
+			return substr($base_name, 0, 250);
+		}
+		return substr('Esai ' . $base_name, 0, 250);
+	}
+
+	private function _find_or_create_topic_in_modul($modul_id, $candidate_name, $detail, &$allowed_topic_ids, &$topic_names_by_id, &$grand_topik_baru) {
+		$candidate_name = substr(trim((string) $candidate_name), 0, 250);
+		$existing = $this->db->where('topik_modul_id', $modul_id)
+			->where('topik_nama', $candidate_name)
+			->limit(1)
+			->get('cbt_topik');
+		if ($existing->num_rows() > 0) {
+			$row_t = $existing->row();
+			$tid = intval($row_t->topik_id);
+			$allowed_topic_ids[$tid] = true;
+			$topic_names_by_id[$tid] = $row_t->topik_nama;
+			return array('id' => $tid, 'nama' => $row_t->topik_nama, 'created' => false);
+		}
+
+		$data_topik = array(
+			'topik_modul_id' => $modul_id,
+			'topik_nama' => $candidate_name,
+			'topik_detail' => substr($detail, 0, 255),
+			'topik_aktif' => 1
+		);
+		$this->cbt_topik_model->save($data_topik);
+		$tid = intval($this->db->insert_id());
+		$allowed_topic_ids[$tid] = true;
+		$topic_names_by_id[$tid] = $candidate_name;
+		$grand_topik_baru++;
+		return array('id' => $tid, 'nama' => $candidate_name, 'created' => true);
+	}
+
+	private function _collect_rids_from_items($items) {
+		$rids = array();
+		foreach ($items as $it) {
+			if (!empty($it['soal_html']) && preg_match_all('/\[\[IMG_RID:([^\]]+)\]\]/', $it['soal_html'], $m)) {
+				foreach ($m[1] as $rid) {
+					$rids[$rid] = true;
+				}
+			}
+			if (!empty($it['jawaban'])) {
+				foreach ($it['jawaban'] as $j) {
+					if (!empty($j['html']) && preg_match_all('/\[\[IMG_RID:([^\]]+)\]\]/', $j['html'], $m)) {
+						foreach ($m[1] as $rid) {
+							$rids[$rid] = true;
+						}
+					}
+				}
+			}
+		}
+		return array_keys($rids);
 	}
 
 	private function _clean_filename_to_topic($filename, $parent_dir = '') {
@@ -1140,11 +1400,12 @@ class Modul_import_word extends Member_Controller {
 		return preg_replace('/[^a-z0-9]+/', '', $str);
 	}
 
-	private function _match_topic($clean_name, $topics) {
+	private function _match_topic($clean_name, $topics, $exact_only = false) {
 		$norm_file = $this->_normalize_name($clean_name);
 		if ($norm_file === '' || empty($topics)) {
 			return array('topik_id' => 0, 'match_type' => 'none');
 		}
+		$file_is_esai = (preg_match('/^esai\b/i', trim((string) $clean_name)) === 1);
 
 		// 1. Exact normalized match
 		foreach ($topics as $t) {
@@ -1153,9 +1414,17 @@ class Modul_import_word extends Member_Controller {
 			}
 		}
 
-		// 2. Partial contains match (minimal 4 karakter agar tidak salah cocok)
+		if ($exact_only) {
+			return array('topik_id' => 0, 'match_type' => 'none');
+		}
+
+		// 2. Partial contains match (minimal 4 karakter; jangan cocokkan file non-Esai ke topik Esai)
 		if (strlen($norm_file) >= 4) {
 			foreach ($topics as $t) {
+				$t_is_esai = (preg_match('/^esai\b/i', trim((string) $t['nama'])) === 1);
+				if ($t_is_esai && !$file_is_esai) {
+					continue;
+				}
 				$norm_t = $this->_normalize_name($t['nama']);
 				if (strlen($norm_t) >= 4 && (strpos($norm_file, $norm_t) !== false || strpos($norm_t, $norm_file) !== false)) {
 					return array('topik_id' => intval($t['id']), 'match_type' => 'partial');

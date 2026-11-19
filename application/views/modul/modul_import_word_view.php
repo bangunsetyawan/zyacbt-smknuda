@@ -89,13 +89,35 @@
 							</div>
 							<div class="box-body">
 								<div id="batch-preview-pesan"></div>
-								<div class="checkbox" style="margin-top: 0; margin-bottom: 10px;">
-									<label>
-										<input type="hidden" name="include_esai" value="0" />
-										<input type="checkbox" name="include_esai" id="batch-include-esai" value="1" checked />
-										<strong>Sertakan tabel Soal Uraian / Esai</strong> (jika tersedia di dalam file Word)
+								<div class="well well-sm" style="margin-bottom: 12px; background: #f8fafc; border-color: #dce4ec;">
+									<strong style="margin-right: 12px;"><i class="fa fa-sliders"></i> Mode Import Soal:</strong>
+									<label class="radio-inline" style="margin-right: 16px;">
+										<input type="radio" name="import_mode" class="batch-import-mode" value="pg_esai" checked />
+										<strong>Sertakan Esai (Topik Terpisah)</strong>
+										<small class="text-muted">— Esai otomatis jadi topik baru berawalan <code>Esai ...</code></small>
+									</label>
+									<label class="radio-inline">
+										<input type="radio" name="import_mode" class="batch-import-mode" value="pg_only" />
+										<strong>Pilihan Ganda Saja</strong>
+										<small class="text-muted">— Hanya import PG, abaikan tabel Esai</small>
 									</label>
 								</div>
+								<style>
+									#table-batch-preview {
+										table-layout: fixed;
+										width: 100%;
+										margin-bottom: 0;
+									}
+									#table-batch-preview th,
+									#table-batch-preview td {
+										word-wrap: break-word;
+										overflow-wrap: anywhere;
+									}
+									#table-batch-preview .form-control {
+										width: 100%;
+										box-sizing: border-box;
+									}
+								</style>
 								<div class="table-responsive">
 									<table class="table table-bordered table-striped table-hover" id="table-batch-preview">
 										<thead>
@@ -103,10 +125,10 @@
 												<th style="width: 36px; text-align: center;">
 													<input type="checkbox" id="batch-check-all" checked />
 												</th>
-												<th>Nama File (.docx / .doc)</th>
-												<th style="width: 195px;">Hasil Baca</th>
-												<th style="width: 170px;">Status</th>
-												<th style="min-width: 280px;">Target Topik (Modul Aktif)</th>
+												<th style="width: 29%;">Nama File (.docx / .doc)</th>
+												<th style="width: 115px;">Hasil Baca</th>
+												<th style="width: 135px;">Status</th>
+												<th>Target Topik (Modul Aktif)</th>
 											</tr>
 										</thead>
 										<tbody id="batch-preview-tbody"></tbody>
@@ -592,27 +614,90 @@
             resetBatchUI();
         });
 
+        var BATCH_TOPICS_BY_ID = {};
+        var BATCH_TOPICS_BY_LOWER = {};
+
+        function buildEsaiTopicName(baseName) {
+            var name = $.trim(String(baseName || ''));
+            if (name === '') name = 'Soal';
+            if (/^esai\b/i.test(name)) {
+                return name;
+            }
+            return 'Esai ' + name;
+        }
+
+        function refreshRowTargetHints(idx) {
+            var $sel = $('.batch-target-select[data-idx="' + idx + '"]');
+            if ($sel.length === 0) return;
+
+            var val = $sel.val();
+            var $newWrap = $('#batch-new-wrap-' + idx);
+            var $existWarn = $('#batch-exist-warn-' + idx);
+            var baseName = '';
+
+            if (val === '__NEW__') {
+                $newWrap.removeClass('hide');
+                baseName = $.trim($('#batch-new-input-' + idx).val()) || $sel.data('clean-name') || '';
+                $existWarn.addClass('hide').html('');
+            } else {
+                $newWrap.addClass('hide');
+                var t = BATCH_TOPICS_BY_ID[String(val)];
+                baseName = t ? t.nama : '';
+                if (t && parseInt(t.jml_soal, 10) > 0) {
+                    $existWarn.removeClass('hide').html(
+                        '<i class="fa fa-info-circle"></i> Topik sudah berisi <strong>' + t.jml_soal + ' soal</strong> (akan <strong>menambah</strong> soal, tidak menimpa).'
+                    );
+                } else {
+                    $existWarn.addClass('hide').html('');
+                }
+            }
+
+            var $esaiPreview = $('#batch-esai-target-' + idx);
+            if ($esaiPreview.length > 0) {
+                var jmlEsai = parseInt($esaiPreview.data('jml-esai'), 10) || 0;
+                var mode = $('input[name="import_mode"]:checked').val() || 'pg_esai';
+                if (mode === 'pg_only') {
+                    $esaiPreview.html(
+                        '<span class="text-muted" style="text-decoration:line-through;"><i class="fa fa-ban"></i> ' + jmlEsai + ' Esai diabaikan (mode Pilihan Ganda Saja)</span>'
+                    );
+                } else {
+                    var esaiName = buildEsaiTopicName(baseName);
+                    var existingEsai = BATCH_TOPICS_BY_LOWER[esaiName.toLowerCase()];
+                    var esaiBadge = existingEsai
+                        ? ' <span class="label label-warning" style="font-size:10px;">Sudah ada (' + existingEsai.jml_soal + ' soal)</span>'
+                        : ' <span class="label" style="background:#4f46e5; font-size:10px;">Topik Baru</span>';
+                    $esaiPreview.html(
+                        '<i class="fa fa-level-up fa-rotate-90 text-purple"></i> <strong>Topik Esai (' + jmlEsai + ' soal):</strong> ' +
+                        '<span style="color:#4f46e5; font-weight:600;">' + escapeHtml(esaiName) + '</span>' + esaiBadge
+                    );
+                }
+            }
+        }
+
         $(document).on('change', '#batch-check-all', function() {
             var checked = $(this).is(':checked');
             $('.batch-file-check:not(:disabled)').prop('checked', checked);
         });
 
         $(document).on('change', '.batch-target-select', function() {
-            var idx = $(this).data('idx');
-            var val = $(this).val();
-            var $wrap = $('#batch-new-wrap-' + idx);
-            if (val === '__NEW__') {
-                $wrap.removeClass('hide');
-            } else {
-                $wrap.addClass('hide');
-            }
+            refreshRowTargetHints($(this).data('idx'));
+        });
+
+        $(document).on('input', '.batch-new-topik-input', function() {
+            refreshRowTargetHints($(this).data('idx'));
+        });
+
+        $(document).on('change', '.batch-import-mode', function() {
+            $('.batch-target-select').each(function() {
+                refreshRowTargetHints($(this).data('idx'));
+            });
         });
 
         $('#form-batch-upload').submit(function(e) {
             e.preventDefault();
             var fileInput = document.getElementById('batch-files');
             if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-                $('#batch-pesan').html(pesan_err('Pilih minimal satu file .docx atau .zip terlebih dahulu.'));
+                $('#batch-pesan').html(pesan_err('Pilih minimal satu file .docx, .doc, atau .zip terlebih dahulu.'));
                 return false;
             }
 
@@ -641,37 +726,54 @@
                     if (obj.status == 1) {
                         $('#batch-token').val(obj.batch_token);
                         $('#btn-batch-reset').removeClass('hide');
+                        $('input[name="import_mode"][value="pg_esai"]').prop('checked', true);
 
                         var sum = obj.summary || {};
                         $('#batch-summary-badges').html(
-                            '<span class="label label-primary" style="margin-right:4px;">' + (sum.total_file || 0) + ' File</span>' +
+                            '<span class="label label-primary" style="margin-right:4px;">' + (sum.total_siap || 0) + ' / ' + (sum.total_file || 0) + ' File Siap</span>' +
+                            ((sum.total_duplikat || 0) > 0 ? '<span class="label label-warning" style="margin-right:4px;">' + sum.total_duplikat + ' Duplikat Dilewati</span>' : '') +
                             '<span class="label label-success" style="margin-right:4px;">' + (sum.total_soal || 0) + ' PG</span>' +
-                            ((sum.total_esai || 0) > 0 ? '<span class="label" style="background:#4f46e5; margin-right:4px;">' + sum.total_esai + ' Esai</span>' : '') +
+                            ((sum.total_esai || 0) > 0 ? '<span class="label" style="background:#4f46e5; margin-right:4px;">' + sum.total_esai + ' Esai (' + (sum.total_file_ada_esai || 0) + ' topik terpisah)</span>' : '') +
                             '<span class="label label-info">' + (sum.total_gambar || 0) + ' Gambar</span>'
                         );
 
+                        var alertHtml = '';
                         if (obj.skipped_notes && obj.skipped_notes.length > 0) {
-                            $('#batch-preview-pesan').html(
-                                '<div class="alert alert-warning" style="margin-bottom:10px;"><strong>File dilewati:</strong> ' +
-                                escapeHtml(obj.skipped_notes.join('; ')) + '</div>'
-                            );
-                        } else {
-                            $('#batch-preview-pesan').html('');
+                            alertHtml += '<div class="alert alert-warning" style="margin-bottom:10px;"><strong>File dilewati:</strong> ' +
+                                escapeHtml(obj.skipped_notes.join('; ')) + '</div>';
                         }
+                        if ((sum.total_duplikat || 0) > 0) {
+                            alertHtml += '<div class="alert alert-warning" style="margin-bottom:10px;"><i class="fa fa-copy"></i> <strong>' + sum.total_duplikat + ' file duplikat identik</strong> (isi 100% sama) terdeteksi di dalam batch dan <strong>otomatis tidak dicentang</strong> agar soal tidak masuk ganda.</div>';
+                        }
+                        $('#batch-preview-pesan').html(alertHtml);
 
                         var topics = obj.topics || [];
+                        BATCH_TOPICS_BY_ID = {};
+                        BATCH_TOPICS_BY_LOWER = {};
+                        $.each(topics, function(__, t) {
+                            BATCH_TOPICS_BY_ID[String(t.id)] = t;
+                            BATCH_TOPICS_BY_LOWER[String(t.nama || '').toLowerCase()] = t;
+                        });
+
                         var canCreate = !!obj.can_create_topik;
                         var tbodyHtml = '';
+                        var allChecked = true;
 
                         $.each(obj.files || [], function(_, f) {
                             var isError = (f.status === 'error');
+                            var isDup = !!f.is_duplicate_content;
+                            var isChecked = !isError && (f.default_checked !== false);
+                            if (!isError && !isChecked) allChecked = false;
+
                             var statusBadge = '';
-                            if (f.status === 'ok') {
-                                statusBadge = '<span class="label label-success"><i class="fa fa-check"></i> Siap Import</span>';
+                            if (isError) {
+                                statusBadge = '<span class="label label-danger"><i class="fa fa-times"></i> Gagal Baca</span>';
+                            } else if (isDup) {
+                                statusBadge = '<span class="label label-warning"><i class="fa fa-copy"></i> Duplikat Identik</span>';
                             } else if (f.status === 'warning') {
                                 statusBadge = '<span class="label label-warning"><i class="fa fa-exclamation-triangle"></i> Peringatan</span>';
                             } else {
-                                statusBadge = '<span class="label label-danger"><i class="fa fa-times"></i> Gagal Baca</span>';
+                                statusBadge = '<span class="label label-success"><i class="fa fa-check"></i> Siap Import</span>';
                             }
 
                             var warnHtml = '';
@@ -681,13 +783,16 @@
                             }
 
                             var matchNote = '';
+                            if (f.name_disambiguated) {
+                                matchNote += ' <span class="label label-warning" style="font-size:10px;" title="Nama file sama dengan file lain, otomatis dibedakan dengan nama folder">Nama Dibedakan</span>';
+                            }
                             if (f.match_type === 'exact') {
-                                matchNote = ' <span class="label label-info" style="font-size:10px;">Auto-Match</span>';
+                                matchNote += ' <span class="label label-info" style="font-size:10px;">Auto-Match</span>';
                             } else if (f.match_type === 'partial') {
-                                matchNote = ' <span class="label label-default" style="font-size:10px;">Mirip</span>';
+                                matchNote += ' <span class="label label-default" style="font-size:10px;">Mirip</span>';
                             }
 
-                            var selectHtml = '<select name="target_topik[' + f.index + ']" class="form-control input-sm batch-target-select" data-idx="' + f.index + '"' + (isError ? ' disabled' : '') + '>';
+                            var selectHtml = '<select name="target_topik[' + f.index + ']" class="form-control input-sm batch-target-select" data-idx="' + f.index + '" data-clean-name="' + escapeHtml(f.clean_name) + '"' + (isError ? ' disabled' : '') + '>';
                             if (canCreate) {
                                 selectHtml += '<option value="__NEW__"' + (f.suggested_topik === '__NEW__' ? ' selected' : '') + '>+ Buat Topik Baru (di Modul Aktif)</option>';
                             }
@@ -699,12 +804,19 @@
 
                             var newWrapClass = (f.suggested_topik === '__NEW__' && canCreate && !isError) ? '' : ' hide';
                             selectHtml += '<div id="batch-new-wrap-' + f.index + '" class="' + newWrapClass + '" style="margin-top:5px;">' +
-                                '<input type="text" name="new_topik_name[' + f.index + ']" class="form-control input-sm" value="' + escapeHtml(f.clean_name) + '" placeholder="Nama topik baru..." />' +
+                                '<input type="text" id="batch-new-input-' + f.index + '" name="new_topik_name[' + f.index + ']" data-idx="' + f.index + '" class="form-control input-sm batch-new-topik-input" value="' + escapeHtml(f.clean_name) + '" placeholder="Nama topik PG baru..." />' +
                                 '</div>';
 
-                            tbodyHtml += '<tr' + (isError ? ' class="danger"' : (f.status === 'warning' ? ' class="warning"' : '')) + '>' +
+                            selectHtml += '<div id="batch-exist-warn-' + f.index + '" class="text-warning hide" style="font-size:11px; margin-top:4px; color:#b45309;"></div>';
+
+                            if ((f.jumlah_esai || 0) > 0 && !isError) {
+                                selectHtml += '<div id="batch-esai-target-' + f.index + '" data-jml-esai="' + f.jumlah_esai + '" style="font-size:11px; margin-top:5px; padding:4px 7px; background:#f5f3ff; border-left:3px solid #4f46e5; border-radius:2px;"></div>';
+                            }
+
+                            var rowCls = isError ? ' class="danger"' : ((isDup || f.status === 'warning') ? ' class="warning"' : '');
+                            tbodyHtml += '<tr' + rowCls + '>' +
                                 '<td style="text-align:center; vertical-align:middle;">' +
-                                    '<input type="checkbox" class="batch-file-check" name="include_idx[]" value="' + f.index + '"' + (isError ? ' disabled' : ' checked') + ' />' +
+                                    '<input type="checkbox" class="batch-file-check" name="include_idx[]" value="' + f.index + '"' + (isError ? ' disabled' : (isChecked ? ' checked' : '')) + ' />' +
                                 '</td>' +
                                 '<td style="vertical-align:middle;"><strong>' + escapeHtml(f.filename) + '</strong> <span class="label label-default" style="font-size:10px;">' + escapeHtml(f.format_label || '') + '</span>' + matchNote + '</td>' +
                                 '<td style="vertical-align:middle;">' +
@@ -718,7 +830,10 @@
                         });
 
                         $('#batch-preview-tbody').html(tbodyHtml);
-                        $('#batch-check-all').prop('checked', true);
+                        $.each(obj.files || [], function(_, f) {
+                            refreshRowTargetHints(f.index);
+                        });
+                        $('#batch-check-all').prop('checked', allChecked);
                         $('#box-batch-preview').removeClass('hide');
                         notify_success(obj.pesan);
                     } else {
@@ -777,11 +892,19 @@
                         var badge = isOk
                             ? '<span class="label label-success">Berhasil</span>'
                             : '<span class="label label-danger">Gagal</span>';
-                        var topikLabel = isOk
-                            ? escapeHtml(r.topik_nama) + (r.created_new_topic ? ' <span class="label label-info">Baru</span>' : '')
-                            : '-';
+                        var topikLabel = '-';
+                        if (isOk) {
+                            var parts = [];
+                            if (r.jumlah_soal > 0 && r.topik_nama) {
+                                parts.push('<strong>PG:</strong> ' + escapeHtml(r.topik_nama) + (r.created_new_topic ? ' <span class="label label-info">Baru</span>' : ''));
+                            }
+                            if (r.jumlah_esai > 0 && r.esai_topik_nama) {
+                                parts.push('<span style="color:#4f46e5;"><strong>Esai:</strong> ' + escapeHtml(r.esai_topik_nama) + '</span>' + (r.created_esai_topic ? ' <span class="label" style="background:#4f46e5;">Baru</span>' : ''));
+                            }
+                            topikLabel = parts.length > 0 ? parts.join('<br/>') : escapeHtml(r.topik_nama || '-');
+                        }
                         var soalInfo = isOk
-                            ? (r.jumlah_soal + ' PG' + ((r.jumlah_esai || 0) > 0 ? ' + ' + r.jumlah_esai + ' Esai' : ''))
+                            ? ((r.jumlah_soal > 0 ? r.jumlah_soal + ' PG' : '') + (r.jumlah_soal > 0 && r.jumlah_esai > 0 ? '<br/>' : '') + (r.jumlah_esai > 0 ? '<span style="color:#4f46e5;">' + r.jumlah_esai + ' Esai</span>' : ''))
                             : '-';
                         rowsHtml += '<tr>' +
                             '<td>' + escapeHtml(r.filename) + '</td>' +
