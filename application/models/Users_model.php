@@ -157,9 +157,13 @@ class Users_model extends CI_Model{
                 
                 $menu_child = '';
                 $menu_child_count = 0;
+                $hidden_menus = array('modul-import'); // Sembunyikan Import Soal Spreadsheet dari sidebar (zero DB mod)
                 if($result_child->num_rows()>0){
                     $menu_child = $menu_child.'<ul class="treeview-menu">';
                     foreach ($result_child->result() as $child){
+                        if (in_array($child->kode_menu, $hidden_menus, true)) {
+                            continue;
+                        }
                         $child_active='';
                         if($kode_menu==$child->kode_menu){
                             $child_active='active';
