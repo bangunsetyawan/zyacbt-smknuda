@@ -158,6 +158,9 @@ class Users_model extends CI_Model{
                 $menu_child = '';
                 $menu_child_count = 0;
                 $hidden_menus = array('modul-import'); // Sembunyikan Import Soal Spreadsheet dari sidebar (zero DB mod)
+                $menu_label_overrides = array(
+                    'modul-topik' => 'Topik (Mata Pelajaran)'
+                );
                 if($result_child->num_rows()>0){
                     $menu_child = $menu_child.'<ul class="treeview-menu">';
                     foreach ($result_child->result() as $child){
@@ -168,8 +171,9 @@ class Users_model extends CI_Model{
                         if($kode_menu==$child->kode_menu){
                             $child_active='active';
                         }
+                        $child_label = isset($menu_label_overrides[$child->kode_menu]) ? $menu_label_overrides[$child->kode_menu] : $child->nama_menu;
                         $menu_child = $menu_child.'
-                            <li class="'.$child_active.'"><a href="'.site_url().'/'.$child->url.'"><i class="fa fa-circle-o"></i> '.$child->nama_menu.'</a></li>
+                            <li class="'.$child_active.'"><a href="'.site_url().'/'.$child->url.'"><i class="fa fa-circle-o"></i> '.$child_label.'</a></li>
                         ';
                         
                         $menu_child_count++;

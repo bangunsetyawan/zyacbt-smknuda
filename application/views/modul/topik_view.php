@@ -1,12 +1,12 @@
 <!-- Content Header (Page header) -->
 <section class="content-header">
 	<h1>
-		Topik
-		<small>Daftar topik, penambahan topik, pengubahan topik, dan penghapusan topik berdasarkan Modul</small>
+		Topik (Mata Pelajaran)
+		<small>Daftar mata pelajaran / paket soal pada modul ujian (tambah, import Excel, salin, ubah, dan hapus)</small>
 	</h1>
 	<ol class="breadcrumb">
 		<li><a href="<?php echo site_url(); ?>/"><i class="fa fa-dashboard"></i> Home</a></li>
-		<li class="active">Topik</li>
+		<li class="active">Topik (Mata Pelajaran)</li>
 	</ol>
 </section>
 
