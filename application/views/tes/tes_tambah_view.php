@@ -21,7 +21,8 @@
                 </div><!-- /.box-header -->
 
                 <div class="box-body">
-                    <div class="col-xs-6">
+                    <div class="row">
+                    <div class="col-md-6 col-sm-12">
                         <div id="form-pesan-tes"></div>
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Nama</label>
@@ -46,7 +47,7 @@
                                     </div>
                                     <input type="text" name="tambah-rentang-waktu" id="tambah-rentang-waktu" class="form-control input-sm" value="<?php if(!empty($rentang_waktu)){ echo $rentang_waktu; } ?>" readonly />
                                 </div>
-                                <p class="help-block">Rentang waktu tes dilaksanakan</p>
+                                <p class="help-block"><strong>Jam buka–tutup sesi:</strong> jendela waktu kapan siswa boleh masuk &amp; memulai tes (bukan durasi pengerjaan).</p>
                             </div>
                         </div>
                         <div class="form-group">
@@ -58,12 +59,12 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-xs-6">
+                    <div class="col-md-6 col-sm-12">
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Waktu Tes</label>
                             <div class="col-sm-9">
                                 <input type="text" name="tambah-waktu" id="tambah-waktu" class="form-control input-sm" value="30" />
-                                <p class="help-block">Waktu tes dalam satuan menit</p>
+                                <p class="help-block"><strong>Durasi pengerjaan (menit):</strong> hitung mundur waktu ujian sejak siswa menekan tombol Mulai.</p>
                             </div>
                         </div>
                         <div class="form-group">
@@ -89,8 +90,8 @@
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Tunjukkan Hasil</label>
                             <div class="col-sm-9">
-                                <input type="checkbox" name="tambah-tunjukkan-hasil" id="tambah-tunjukkan-hasil" value="1" checked>
-                                <p class="help-block">Menunjukkan hasil ke user saat tes sudah selesai</p>
+                                <input type="checkbox" name="tambah-tunjukkan-hasil" id="tambah-tunjukkan-hasil" value="1">
+                                <p class="help-block">Menunjukkan nilai ke siswa setelah selesai (default nonaktif; biarkan tidak dicentang untuk ujian sekolah / Esai).</p>
                             </div>
                         </div>
                         <div class="form-group">
@@ -108,6 +109,7 @@
                             </div>
                         </div>
                     </div>
+                    </div>
                 </div>
                 <div class="box-footer">
                     <button type="submit" id="btn-tambah-simpan" class="btn btn-primary pull-right">Simpan</button>
@@ -124,7 +126,8 @@
                     <div class="box-title">Tambah Soal <div id="judul-tambah-soal"></div></div>
                 </div><!-- /.box-header -->
                 <div class="box-body">
-                    <div class="col-xs-6">
+                    <div class="row">
+                    <div class="col-md-6 col-sm-12">
                         <?php echo form_open($url.'/tambah_soal','id="form-tambah-soal"  class="form-horizontal"'); ?>
                         <div id="form-pesan-soal"></div>
                         <div class="form-group">
@@ -155,6 +158,11 @@
                                     <option value="2">Essay</option>
                                     <option value="3">Jawaban Singkat</option>
                                 </select>
+                                <p class="help-block" id="info-tipe-soal" style="margin-bottom:0;">
+                                    <i class="fa fa-info-circle text-info"></i>
+                                    <strong>PG:</strong> pilih <em>Pilihan Ganda</em>, isi Jml Jawaban (mis. 4/5) &amp; aktifkan Acak Jawaban.
+                                    <strong>Essay:</strong> pilih <em>Essay</em>, isi Jml Jawaban <code>1</code> &amp; matikan Acak Jawaban agar kartu siswa otomatis berlabel <strong>ESAI</strong>.
+                                </p>
                             </div>
                         </div>
                         <div class="form-group">
@@ -203,7 +211,7 @@
                         </div>
                         </form>
                     </div>
-                    <div class="col-xs-6">
+                    <div class="col-md-6 col-sm-12">
                         <table id="table-soal" class="table table-bordered table-hover">
                             <thead>
                                 <tr>
@@ -220,6 +228,7 @@
                                 </tr>
                             </tbody>
                         </table>                          
+                    </div>
                     </div>
                 </div>
                 <div class="box-footer">

@@ -93,9 +93,8 @@
 				<div class="box-header with-border">
 					<div class="box-title">Daftar Hasil Tes</div>
                     <div class="box-tools pull-right">
-                        <div class="dropdown pull-right">
-                            <a  style="cursor: pointer;" onclick="export_excel()">Export ke Excel</a>
-                        </div>
+                        <button type="button" id="btn-refresh-hasil" class="btn btn-default btn-xs" onclick="refresh_table()" title="Muat ulang data tabel tanpa reload halaman"><i class="fa fa-refresh"></i> Refresh Tabel</button>
+                        <button type="button" class="btn btn-success btn-xs" onclick="export_excel()" style="margin-left:4px;"><i class="fa fa-file-excel-o"></i> Export ke Excel</button>
                     </div>
 				</div><!-- /.box-header -->
 
@@ -131,11 +130,11 @@
 					</table>                        
 				</div>
                 <div class="box-footer">
-                    <button type="button" id="btn-edit-pilih" title="Pilih Hasil Tes" class="btn btn-default pull-right">Pilih Semua</button>
-                    <button type="button" id="btn-edit-hapus" title="Hapus Hasil" class="btn btn-primary">Hapus</button>
-                    <button type="button" id="btn-edit-hentikan" class="btn btn-primary">Hentikan</button>
-                    <button type="button" id="btn-edit-buka-tes" class="btn btn-primary">Buka Tes</button>
-                    <button type="button" id="btn-edit-waktu" class="btn btn-primary">Tambah Waktu</button>
+                    <button type="button" id="btn-edit-pilih" title="Pilih Hasil Tes" class="btn btn-default pull-right"><i class="fa fa-check-square-o"></i> Pilih Semua</button>
+                    <button type="button" id="btn-edit-waktu" class="btn btn-success" title="Tambah durasi waktu ujian peserta terpilih"><i class="fa fa-clock-o"></i> Tambah Waktu</button>
+                    <button type="button" id="btn-edit-buka-tes" class="btn btn-info" title="Buka kembali tes yang sudah terkunci/selesai"><i class="fa fa-unlock"></i> Buka Tes</button>
+                    <button type="button" id="btn-edit-hentikan" class="btn btn-warning" title="Hentikan &amp; kunci tes peserta terpilih"><i class="fa fa-stop"></i> Hentikan</button>
+                    <button type="button" id="btn-edit-hapus" title="Hapus Hasil Tes (Permanen)" class="btn btn-danger" style="margin-left:20px;"><i class="fa fa-trash"></i> Hapus</button>
                 </div>
 			</div>
         </div>
@@ -214,8 +213,10 @@
         });
 
         $('#btn-edit-hapus').click(function(){
-            $('#edit-pilihan').val('hapus');
-            $('#form-edit').submit();
+            if(confirm('Yakin ingin menghapus hasil tes peserta yang dipilih? Data nilai yang dihapus tidak dapat dikembalikan.')){
+                $('#edit-pilihan').val('hapus');
+                $('#form-edit').submit();
+            }
         });
 
         $('#btn-edit-hentikan').click(function(){

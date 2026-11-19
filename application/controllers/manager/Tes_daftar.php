@@ -144,12 +144,82 @@ class Tes_daftar extends Member_Controller {
 
 	    // get result after running query and put it in array
 		$i=$start;
+		$today = date('Y-m-d');
+		$now_dt = new DateTime();
 		$query = $query->result();
 	    foreach ($query as $temp) {			
 			$record = array();
+
+			// Deteksi tipe soal & daftar soal untuk badge PG / ESAI / CAMPURAN
+			$query_topik_set = $this->cbt_tes_topik_set_model->get_by_kolom('tset_tes_id', $temp->tes_id);
+			$has_pg = false;
+			$has_essay = false;
+			$data_soal = 'Belum ada soal';
+
+			if($query_topik_set->num_rows()>0){
+				$topik_rows = $query_topik_set->result();
+				$data_soal = '';
+				foreach($topik_rows as $topik){
+					if((int)$topik->tset_tipe === 1){
+						$has_pg = true;
+					}elseif((int)$topik->tset_tipe === 2 || (int)$topik->tset_tipe === 3){
+						$has_essay = true;
+					}else{
+						if(preg_match('/\b(esai|essay|uraian)\b/i', $temp->tes_nama)){
+							$has_essay = true;
+						}else{
+							$has_pg = true;
+						}
+					}
+
+					$q_topik = $this->cbt_topik_model->get_by_kolom_limit('topik_id', $topik->tset_topik_id, 1)->row();
+					$q_modul = $this->cbt_modul_model->get_by_kolom_limit('modul_id', $q_topik->topik_modul_id, 1)->row();
+					
+					$ket_acak = '';
+					if($topik->tset_acak_soal==1){
+						$ket_acak = $ket_acak.' Acak Soal=YA';
+					}else{
+						$ket_acak = $ket_acak.' Acak Soal=TDK';
+					}
+					if($topik->tset_acak_jawaban==1){
+						$ket_acak = $ket_acak.'; Acak JWB=YA';
+					}else{
+						$ket_acak = $ket_acak.'; Acak JWB=TDK';
+					}
+					
+					if(empty($data_soal)){
+						$data_soal = '['.$q_modul->modul_nama.'] '.$q_topik->topik_nama.' ['.$topik->tset_jumlah.'] ['.$topik->tset_jawaban.']'.$ket_acak;
+					}else{
+						$data_soal = $data_soal.'<br />'.'['.$q_modul->modul_nama.'] '.$q_topik->topik_nama.' ['.$topik->tset_jumlah.'] ['.$topik->tset_jawaban.']'.$ket_acak;
+					}
+				}
+			}
+
+			// Badge kategori soal (selaras halaman siswa)
+			if($has_essay && !$has_pg){
+				$badge_tipe = '<span class="label label-primary" style="background-color:#4f46e5;">ESAI</span>';
+			}elseif($has_essay && $has_pg){
+				$badge_tipe = '<span class="label label-warning">CAMPURAN</span>';
+			}elseif($has_pg){
+				$badge_tipe = '<span class="label label-success" style="background-color:#059669;">PG</span>';
+			}else{
+				$badge_tipe = '<span class="label label-default">TANPA SOAL</span>';
+			}
+
+			// Badge status jadwal
+			$begin_date = substr($temp->tes_begin_time, 0, 10);
+			$end_date = substr($temp->tes_end_time, 0, 10);
+			$end_dt = new DateTime($temp->tes_end_time);
+			if($now_dt > $end_dt){
+				$badge_jadwal = '<span class="label label-default">Berakhir</span>';
+			}elseif($begin_date <= $today && $end_date >= $today){
+				$badge_jadwal = '<span class="label label-success">Aktif Hari Ini</span>';
+			}else{
+				$badge_jadwal = '<span class="label label-info">Terjadwal</span>';
+			}
             
 			$record[] = ++$i;
-            $record[] = $temp->tes_nama;
+            $record[] = '<strong>'.htmlspecialchars($temp->tes_nama, ENT_QUOTES, 'UTF-8').'</strong><div style="margin-top:3px;">'.$badge_tipe.' '.$badge_jadwal.'</div>';
             $record[] = $temp->tes_max_score;
             $record[] = $temp->tes_begin_time;
             $record[] = $temp->tes_end_time;
@@ -168,37 +238,7 @@ class Tes_daftar extends Member_Controller {
             	$record[] = 'Tidak';
             }
 
-			$query_topik = $this->cbt_tes_topik_set_model->get_by_kolom('tset_tes_id', $temp->tes_id);
-			if($query_topik->num_rows()>0){
-				$query_topik = $query_topik->result();
-				$data_soal = '';
-				foreach($query_topik as $topik){
-					$query_topik = $this->cbt_topik_model->get_by_kolom_limit('topik_id', $topik->tset_topik_id, 1)->row();
-					$query_modul = $this->cbt_modul_model->get_by_kolom_limit('modul_id', $query_topik->topik_modul_id, 1)->row();
-					
-					$ket_acak = '';
-					if($topik->tset_acak_soal==1){
-						$ket_acak = $ket_acak.' Acak Soal=YA';
-					}else{
-						$ket_acak = $ket_acak.' Acak Soal=TDK';
-					}
-					if($topik->tset_acak_jawaban==1){
-						$ket_acak = $ket_acak.'; Acak JWB=YA';
-					}else{
-						$ket_acak = $ket_acak.'; Acak JWB=TDK';
-					}
-					
-					if(empty($data_soal)){
-						$data_soal = '['.$query_modul->modul_nama.'] '.$query_topik->topik_nama.' ['.$topik->tset_jumlah.'] ['.$topik->tset_jawaban.']'.$ket_acak;
-					}else{
-						$data_soal = $data_soal.'<br />'.'['.$query_modul->modul_nama.'] '.$query_topik->topik_nama.' ['.$topik->tset_jumlah.'] ['.$topik->tset_jawaban.']'.$ket_acak;
-					}
-				}
-				
-				$record[] = $data_soal;
-			}else{
-				$record[] = 'Belum ada soal';
-			}
+			$record[] = $data_soal;
             
 			$query_grup = $this->cbt_tesgrup_model->get_by_tes_id($temp->tes_id);
 			if($query_grup->num_rows()>0){

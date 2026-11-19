@@ -21,16 +21,22 @@
 
                     <div class="box-body">
                         <div class="form-group">
-                            <label>Modul</label>
+                            <label>Modul (Periode / Paket Ujian)</label>
                             <div id="data-kelas">
                                 <select name="modul" id="modul" class="form-control input-sm">
                                     <?php if(!empty($select_modul)){ echo $select_modul; } ?>
                                 </select>
                             </div>
                         </div>
+                        <button type="button" class="btn btn-primary btn-sm btn-block" onclick="buka_kelola_modul()">
+                            <i class="fa fa-folder-open"></i> Kelola / Tambah Modul
+                        </button>
                     </div>
                     <div class="box-footer">
-                        <p>Pilih modul terlebih dahulu untuk menampilkan dan menambah topik</p>
+                        <p class="text-muted" style="margin-bottom:0;font-size:12px;">
+                            <strong>Modul</strong> = folder periode ujian (mis. <em>SAS Ganjil 2026</em>).<br />
+                            <strong>Topik</strong> = mata pelajaran / paket soal di dalam modul tersebut.
+                        </p>
                     </div>
                 </div>
         </div>
@@ -190,6 +196,50 @@
             </div>
         </div>
     </div>
+
+    <div class="modal" id="modal-kelola-modul" data-backdrop="static" tabindex="-1" role="dialog" aria-labelledby="basicModal" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button class="close" type="button" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title"><i class="fa fa-folder-open"></i> Kelola Modul Ujian</h4>
+                </div>
+                <div class="modal-body">
+                    <div id="form-pesan-modul"></div>
+                    <?php echo form_open($url.'/tambah_modul', 'id="form-tambah-modul" class="form-inline" style="margin-bottom:15px;"'); ?>
+                        <div class="input-group" style="width:100%;">
+                            <input type="text" class="form-control" id="input-modul-nama" name="modul-nama" placeholder="Nama Modul baru, misal: SAS Ganjil 2026/2027" autocomplete="off">
+                            <span class="input-group-btn">
+                                <button type="submit" class="btn btn-success"><i class="fa fa-plus"></i> Tambah Modul</button>
+                            </span>
+                        </div>
+                    </form>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover table-condensed" id="table-daftar-modul">
+                            <thead>
+                                <tr>
+                                    <th style="width:40px;" class="text-center">No</th>
+                                    <th>Nama Modul</th>
+                                    <th style="width:90px;" class="text-center">Topik</th>
+                                    <th style="width:90px;" class="text-center">Status</th>
+                                    <th style="width:230px;" class="text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-daftar-modul">
+                                <tr><td colspan="5" class="text-center text-muted">Memuat data modul...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="help-block" style="margin-bottom:0;">
+                        <i class="fa fa-shield text-success"></i> <strong>Mode 1 Modul Aktif:</strong> Hanya 1 Modul yang aktif pada satu waktu. Menambah modul baru atau klik <em>Jadikan Aktif</em> akan otomatis memindahkan modul sebelumnya ke <strong>Arsip</strong> (disembunyikan dari dropdown ujian harian tanpa menghapus soal maupun nilai lama). Modul yang masih berisi Topik dikunci dari penghapusan.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </section><!-- /.content -->
 
 
@@ -197,6 +247,123 @@
 <script lang="javascript">
     function refresh_table(){
         $('#table-topik').dataTable().fnReloadAjax();
+    }
+
+    function escape_html(str){
+        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
+    function buka_kelola_modul(){
+        $('#form-pesan-modul').html('');
+        $('#input-modul-nama').val('');
+        $('#modal-kelola-modul').modal('show');
+        load_daftar_modul($('#modul').val());
+    }
+
+    function load_daftar_modul(selectId){
+        var url = '<?php echo site_url().'/'.$url; ?>/get_daftar_modul';
+        if(selectId){
+            url += '?selected_id=' + encodeURIComponent(selectId);
+        }
+        $.getJSON(url, function(res){
+            if(res.status == 1){
+                $('#modul').html(res.select_modul);
+                var html = '';
+                if(res.data && res.data.length > 0){
+                    $.each(res.data, function(idx, m){
+                        var badge = (m.modul_aktif == 1)
+                            ? '<span class="label label-success"><i class="fa fa-check"></i> Aktif</span>'
+                            : '<span class="label label-default">Arsip</span>';
+                        var btnToggle = (m.modul_aktif == 1)
+                            ? '<button type="button" class="btn btn-default btn-xs" disabled title="Modul ini sedang aktif digunakan"><i class="fa fa-check-circle text-success"></i> Aktif</button>'
+                            : '<button type="button" class="btn btn-success btn-xs" onclick="toggle_status_modul('+m.modul_id+')" title="Jadikan modul aktif (modul lain otomatis diarsipkan)"><i class="fa fa-check-circle"></i> Jadikan Aktif</button>';
+                        var btnHapus = (m.jml_topik == 0)
+                            ? ' <button type="button" class="btn btn-danger btn-xs" onclick="hapus_modul_kosong('+m.modul_id+', \''+escape_html(m.modul_nama).replace(/'/g, "\\'")+'\')" title="Hapus modul kosong"><i class="fa fa-trash"></i></button>'
+                            : ' <button type="button" class="btn btn-default btn-xs" disabled title="Kosongkan topik dulu atau gunakan Arsipkan"><i class="fa fa-lock"></i></button>';
+
+                        html += '<tr>'
+                            + '<td class="text-center">'+(idx+1)+'</td>'
+                            + '<td><strong>'+escape_html(m.modul_nama)+'</strong></td>'
+                            + '<td class="text-center"><span class="badge bg-blue">'+m.jml_topik+'</span></td>'
+                            + '<td class="text-center">'+badge+'</td>'
+                            + '<td class="text-center">'
+                            + '<button type="button" class="btn btn-info btn-xs" onclick="ubah_nama_modul('+m.modul_id+', \''+escape_html(m.modul_nama).replace(/'/g, "\\'")+'\')" title="Ubah nama modul"><i class="fa fa-pencil"></i> Ubah</button> '
+                            + btnToggle + btnHapus
+                            + '</td>'
+                            + '</tr>';
+                    });
+                }else{
+                    html = '<tr><td colspan="5" class="text-center text-muted">Belum ada modul.</td></tr>';
+                }
+                $('#tbody-daftar-modul').html(html);
+                refresh_table();
+            }
+        });
+    }
+
+    function ubah_nama_modul(id, namaLama){
+        var namaBaru = prompt('Ubah nama Modul:', namaLama);
+        if(namaBaru === null){ return; }
+        namaBaru = $.trim(namaBaru);
+        if(namaBaru === ''){
+            $('#form-pesan-modul').html(pesan_err('Nama Modul tidak boleh kosong.'));
+            return;
+        }
+        $.ajax({
+            url: '<?php echo site_url().'/'.$url; ?>/edit_modul',
+            type: 'POST',
+            data: {'modul-id': id, 'modul-nama': namaBaru},
+            cache: false,
+            success: function(respon){
+                var obj = $.parseJSON(respon);
+                if(obj.status == 1){
+                    $('#form-pesan-modul').html('');
+                    notify_success(obj.pesan);
+                    load_daftar_modul(obj.modul_id || $('#modul').val());
+                }else{
+                    $('#form-pesan-modul').html(pesan_err(obj.pesan));
+                }
+            }
+        });
+    }
+
+    function toggle_status_modul(id){
+        $.ajax({
+            url: '<?php echo site_url().'/'.$url; ?>/toggle_modul',
+            type: 'POST',
+            data: {'modul-id': id},
+            cache: false,
+            success: function(respon){
+                var obj = $.parseJSON(respon);
+                if(obj.status == 1){
+                    $('#form-pesan-modul').html('');
+                    notify_success(obj.pesan);
+                    load_daftar_modul(obj.modul_id || $('#modul').val());
+                }else{
+                    $('#form-pesan-modul').html(pesan_err(obj.pesan));
+                }
+            }
+        });
+    }
+
+    function hapus_modul_kosong(id, nama){
+        if(!confirm('Hapus modul kosong "' + nama + '"?')){ return; }
+        $.ajax({
+            url: '<?php echo site_url().'/'.$url; ?>/hapus_modul',
+            type: 'POST',
+            data: {'modul-id': id},
+            cache: false,
+            success: function(respon){
+                var obj = $.parseJSON(respon);
+                if(obj.status == 1){
+                    $('#form-pesan-modul').html('');
+                    notify_success(obj.pesan);
+                    load_daftar_modul();
+                }else{
+                    $('#form-pesan-modul').html(pesan_err(obj.pesan));
+                }
+            }
+        });
     }
 
     function tambah(){
@@ -242,6 +409,27 @@
 
         $("#modul").change(function(){
             refresh_table();
+        });
+
+        $('#form-tambah-modul').submit(function(){
+            $.ajax({
+                url: '<?php echo site_url().'/'.$url; ?>/tambah_modul',
+                type: 'POST',
+                data: $('#form-tambah-modul').serialize(),
+                cache: false,
+                success: function(respon){
+                    var obj = $.parseJSON(respon);
+                    if(obj.status == 1){
+                        $('#input-modul-nama').val('');
+                        $('#form-pesan-modul').html('');
+                        notify_success(obj.pesan);
+                        load_daftar_modul(obj.modul_id);
+                    }else{
+                        $('#form-pesan-modul').html(pesan_err(obj.pesan));
+                    }
+                }
+            });
+            return false;
         });
 
         $('#edit-simpan').click(function(){

@@ -26,20 +26,151 @@ class Modul_topik extends Member_Controller {
 	        $this->cbt_modul_model->save($data_modul);
 		}
 
-		$query_modul = $this->cbt_modul_model->get_modul();
-        if($query_modul->num_rows()>0){
-        	$select = '';
-        	$query_modul = $query_modul->result();
-        	foreach ($query_modul as $temp) {
-        		$select = $select.'<option value="'.$temp->modul_id.'">'.$temp->modul_nama.'</option>';
-        	}
-
-        }else{
-        	$select = '<option value="10000000">KOSONG</option>';
-        }
-        $data['select_modul'] = $select;
+		$data['select_modul'] = $this->_build_select_modul();
         
         $this->template->display_admin($this->kelompok.'/topik_view', 'Daftar Topik', $data);
+    }
+
+    private function _build_select_modul($selected_id = null){
+        $query_all = $this->cbt_modul_model->get_all_ordered();
+        if($query_all->num_rows() == 0){
+            return '<option value="10000000">KOSONG</option>';
+        }
+        $aktif_opts = '';
+        $arsip_opts = '';
+        foreach($query_all->result() as $temp){
+            $sel = (!empty($selected_id) && $selected_id == $temp->modul_id) ? ' selected="selected"' : '';
+            $nama = htmlspecialchars($temp->modul_nama, ENT_QUOTES, 'UTF-8');
+            if((int)$temp->modul_aktif === 1){
+                $aktif_opts .= '<option value="'.$temp->modul_id.'"'.$sel.'>'.$nama.'</option>';
+            }else{
+                $arsip_opts .= '<option value="'.$temp->modul_id.'"'.$sel.'>[Arsip] '.$nama.'</option>';
+            }
+        }
+        if(!empty($arsip_opts)){
+            return '<optgroup label="Modul Aktif">'.$aktif_opts.'</optgroup><optgroup label="Modul Arsip (Disembunyikan di Ujian)">'.$arsip_opts.'</optgroup>';
+        }
+        return $aktif_opts;
+    }
+
+    function get_daftar_modul(){
+        $selected_id = $this->input->get('selected_id', TRUE);
+        $query = $this->cbt_modul_model->get_all_ordered();
+        $list = array();
+        if($query->num_rows() > 0){
+            foreach($query->result() as $m){
+                $jml_topik = (int)$this->cbt_topik_model->count_by_kolom('topik_modul_id', $m->modul_id)->row()->hasil;
+                $list[] = array(
+                    'modul_id' => $m->modul_id,
+                    'modul_nama' => $m->modul_nama,
+                    'modul_aktif' => (int)$m->modul_aktif,
+                    'jml_topik' => $jml_topik
+                );
+            }
+        }
+        echo json_encode(array(
+            'status' => 1,
+            'data' => $list,
+            'select_modul' => $this->_build_select_modul($selected_id)
+        ));
+    }
+
+    function tambah_modul(){
+        $this->load->library('form_validation');
+        $this->form_validation->set_rules('modul-nama', 'Nama Modul', 'required|trim|strip_tags|max_length[255]');
+
+        if($this->form_validation->run() == TRUE){
+            $nama = trim($this->input->post('modul-nama', TRUE));
+            if($this->cbt_modul_model->count_by_kolom('modul_nama', $nama)->row()->hasil > 0){
+                $status['status'] = 0;
+                $status['pesan'] = 'Nama Modul sudah ada. Gunakan nama lain.';
+            }else{
+                $this->cbt_modul_model->save(array(
+                    'modul_nama' => $nama,
+                    'modul_aktif' => 1
+                ));
+                $new_id = $this->db->insert_id();
+                $this->cbt_modul_model->set_single_aktif($new_id);
+                $status['status'] = 1;
+                $status['modul_id'] = $new_id;
+                $status['pesan'] = 'Modul "'.$nama.'" berhasil ditambahkan dan diaktifkan (modul lain otomatis diarsipkan).';
+            }
+        }else{
+            $status['status'] = 0;
+            $status['pesan'] = validation_errors();
+        }
+        echo json_encode($status);
+    }
+
+    function edit_modul(){
+        $this->load->library('form_validation');
+        $this->form_validation->set_rules('modul-id', 'ID Modul', 'required|integer');
+        $this->form_validation->set_rules('modul-nama', 'Nama Modul', 'required|trim|strip_tags|max_length[255]');
+
+        if($this->form_validation->run() == TRUE){
+            $id = (int)$this->input->post('modul-id', TRUE);
+            $nama = trim($this->input->post('modul-nama', TRUE));
+            $existing = $this->cbt_modul_model->get_by_kolom_limit('modul_id', $id, 1);
+            if($existing->num_rows() == 0){
+                $status['status'] = 0;
+                $status['pesan'] = 'Modul tidak ditemukan.';
+            }else{
+                $row = $existing->row();
+                if(strcasecmp($row->modul_nama, $nama) !== 0 && $this->cbt_modul_model->count_by_kolom('modul_nama', $nama)->row()->hasil > 0){
+                    $status['status'] = 0;
+                    $status['pesan'] = 'Nama Modul sudah digunakan modul lain.';
+                }else{
+                    $this->cbt_modul_model->update('modul_id', $id, array('modul_nama' => $nama));
+                    $status['status'] = 1;
+                    $status['pesan'] = 'Nama Modul berhasil diperbarui.';
+                }
+            }
+        }else{
+            $status['status'] = 0;
+            $status['pesan'] = validation_errors();
+        }
+        echo json_encode($status);
+    }
+
+    function toggle_modul(){
+        $id = (int)$this->input->post('modul-id', TRUE);
+        $existing = $this->cbt_modul_model->get_by_kolom_limit('modul_id', $id, 1);
+        if($existing->num_rows() == 0){
+            echo json_encode(array('status' => 0, 'pesan' => 'Modul tidak ditemukan.'));
+            return;
+        }
+        $row = $existing->row();
+        if((int)$row->modul_aktif === 1){
+            echo json_encode(array('status' => 0, 'pesan' => 'Modul "'.$row->modul_nama.'" sudah menjadi Modul Aktif saat ini.'));
+            return;
+        }
+        $this->cbt_modul_model->set_single_aktif($id);
+        echo json_encode(array('status' => 1, 'modul_id' => $id, 'pesan' => 'Modul "'.$row->modul_nama.'" kini aktif (modul lainnya otomatis dipindahkan ke Arsip).'));
+    }
+
+    function hapus_modul(){
+        $id = (int)$this->input->post('modul-id', TRUE);
+        $existing = $this->cbt_modul_model->get_by_kolom_limit('modul_id', $id, 1);
+        if($existing->num_rows() == 0){
+            echo json_encode(array('status' => 0, 'pesan' => 'Modul tidak ditemukan.'));
+            return;
+        }
+        $row = $existing->row();
+        $jml_topik = (int)$this->cbt_topik_model->count_by_kolom('topik_modul_id', $id)->row()->hasil;
+        if($jml_topik > 0){
+            echo json_encode(array('status' => 0, 'pesan' => 'Modul masih berisi '.$jml_topik.' Topik. Gunakan tombol "Arsipkan" agar bank soal tetap aman, atau kosongkan topiknya terlebih dahulu.'));
+            return;
+        }
+        if((int)$this->cbt_modul_model->count_all()->row()->hasil <= 1){
+            echo json_encode(array('status' => 0, 'pesan' => 'Minimal harus ada 1 Modul tersisa di sistem.'));
+            return;
+        }
+        if((int)$row->modul_aktif === 1 && (int)$this->cbt_modul_model->count_aktif()->row()->hasil <= 1){
+            echo json_encode(array('status' => 0, 'pesan' => 'Tidak bisa menghapus satu-satunya Modul yang aktif.'));
+            return;
+        }
+        $this->cbt_modul_model->delete('modul_id', $id);
+        echo json_encode(array('status' => 1, 'pesan' => 'Modul kosong "'.$row->modul_nama.'" berhasil dihapus.'));
     }
 
     function tambah(){

@@ -49,12 +49,14 @@ class Tes_hasil extends Member_Controller {
         }
         $data['select_group'] = $select;
 
+        $selected_tes_id = $this->input->get('tes_id', TRUE);
         $query_tes = $this->cbt_tes_user_model->get_by_group();
         $select = '<option value="semua">Semua Tes</option>';
         if($query_tes->num_rows()>0){
         	$query_tes = $query_tes->result();
         	foreach ($query_tes as $temp) {
-        		$select = $select.'<option value="'.$temp->tes_id.'">'.$temp->tes_nama.'</option>';
+        		$selected = (!empty($selected_tes_id) && $selected_tes_id == $temp->tes_id) ? ' selected="selected"' : '';
+        		$select = $select.'<option value="'.$temp->tes_id.'"'.$selected.'>'.$temp->tes_nama.'</option>';
         	}
         }
         $data['select_tes'] = $select;

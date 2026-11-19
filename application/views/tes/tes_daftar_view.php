@@ -37,12 +37,12 @@
                                     <th>Max Score</th>
                                     <th class="all">Waktu Mulai</th>
                                     <th>Waktu Selesai</th>
-                                    <th class="none">Waktu Tes</th>
+                                    <th class="all">Durasi</th>
                                     <th class="none">Poin Dasar</th>
                                     <th class="none">Tunjukkan Hasil</th>
                                     <th class="none">Token</th>
 									<th class="none">Soal</th>
-									<th class="none">Grup Peserta</th>
+									<th class="all">Grup Peserta</th>
                                     <th class="all"></th>
                                     <th class="all"></th>
                                 </tr>

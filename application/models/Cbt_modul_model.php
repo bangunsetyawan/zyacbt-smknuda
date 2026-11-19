@@ -59,6 +59,29 @@ class Cbt_modul_model extends CI_Model{
                  ->order_by('modul_id', 'ALL');
         return $this->db->get();
     }
+
+    function get_all_ordered(){
+        $this->db->from($this->table)
+                 ->order_by('modul_aktif', 'DESC')
+                 ->order_by('modul_id', 'DESC');
+        return $this->db->get();
+    }
+
+    function count_aktif(){
+        $this->db->select('COUNT(*) AS hasil')
+                 ->where('modul_aktif', 1)
+                 ->from($this->table);
+        return $this->db->get();
+    }
+
+    function set_single_aktif($modul_id){
+        $this->db->trans_start();
+        $this->db->update($this->table, array('modul_aktif' => 0));
+        $this->db->where('modul_id', $modul_id)
+                 ->update($this->table, array('modul_aktif' => 1));
+        $this->db->trans_complete();
+        return $this->db->trans_status();
+    }
 	
 	function get_datatable($start, $rows, $kolom, $isi){
 		$this->db->where('('.$kolom.' LIKE "%'.$isi.'%")')
