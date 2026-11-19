@@ -157,7 +157,7 @@ class Users_model extends CI_Model{
                 
                 $menu_child = '';
                 $menu_child_count = 0;
-                $hidden_menus = array('modul-import', 'peserta-group'); // Sembunyikan menu redundan dari sidebar (zero DB mod)
+                $hidden_menus = array('modul-import', 'peserta-group', 'tes-tambah'); // Sembunyikan menu redundan dari sidebar (zero DB mod)
                 $menu_label_overrides = array(
                     'modul-topik' => 'Topik (Mata Pelajaran)',
                     'peserta-daftar' => 'Peserta & Kelas',

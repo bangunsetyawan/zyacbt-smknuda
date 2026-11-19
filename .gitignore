@@ -11,6 +11,7 @@ mysql_data/
 # User uploads (keep folder structure if needed, ignore uploaded content)
 uploads/*
 !uploads/.gitkeep
+public/uploads/batch_tmp/
 
 # CodeIgniter logs & cache
 application/logs/*

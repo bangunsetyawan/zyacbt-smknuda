@@ -29,14 +29,24 @@ class Tes_token extends Member_Controller {
         $this->cbt_tes_token_model->delete_by_user_date($user_id);
 		
 		$query_tes = $this->cbt_tes_model->get_by_now();
-		$select = '<option value="0">Semua Tes</option>';
+		$select = '<option value="0">Semua Tes (Token Global Hari Ini)</option>';
 		if($query_tes->num_rows()>0){
 			$query_tes = $query_tes->result();
 			foreach ($query_tes as $temp) {
-        		$select = $select.'<option value="'.$temp->tes_id.'">'.$temp->tes_nama.'</option>';
+        		$select = $select.'<option value="'.$temp->tes_id.'">'.html_escape($temp->tes_nama).'</option>';
         	}
 		}
 		$data['select_tes'] = $select;
+
+		// Ambil token terbaru hari ini milik operator/admin agar langsung tampil di layar
+		$q_latest = $this->db->select('token_isi, token_ts, token_aktif, token_tes_id')
+		                     ->from('cbt_tes_token')
+		                     ->where('token_user_id', $user_id)
+		                     ->where('DATE(token_ts)', date('Y-m-d'))
+		                     ->order_by('token_id', 'DESC')
+		                     ->limit(1)
+		                     ->get();
+		$data['latest_token'] = ($q_latest->num_rows() > 0) ? $q_latest->row() : null;
         
         $this->template->display_admin($this->kelompok.'/tes_token_view', 'Token', $data);
     }
@@ -144,21 +154,22 @@ class Tes_token extends Member_Controller {
 			$record = array();
             
 			$record[] = ++$i;
-            $record[] = $temp->token_isi;
+			$tok_esc = html_escape($temp->token_isi);
+            $record[] = '<code style="font-size:15px; font-weight:700; letter-spacing:1.5px;">'.$tok_esc.'</code> <button type="button" class="btn btn-default btn-xs" onclick="copyTokenText(\''.$tok_esc.'\')" title="Salin Token"><i class="fa fa-copy"></i> Copy</button>';
             $record[] = $temp->token_ts;
             if($temp->token_aktif==1){
-                $record[] = '1 Hari';
+                $record[] = '<span class="label label-success">1 Hari</span>';
             }else{
-                $record[] = $temp->token_aktif.' Menit';
+                $record[] = '<span class="label label-info">'.(int)$temp->token_aktif.' Menit</span>';
             }
 			
 			if($temp->token_tes_id==0){
-                $record[] = 'Semua Tes';
+                $record[] = '<span class="label label-primary">Semua Tes (Global)</span>';
             }else{
 				$query_tes = $this->cbt_tes_model->get_by_kolom_limit('tes_id', $temp->token_tes_id, 1);
 				if($query_tes->num_rows()>0){
 					$query_tes = $query_tes->row();
-					$record[] = $query_tes->tes_nama;
+					$record[] = html_escape($query_tes->tes_nama);
 				}else{
 					$record[] = 'Spesifik Tes';
 				}
