@@ -173,6 +173,204 @@ class Modul_topik extends Member_Controller {
         echo json_encode(array('status' => 1, 'pesan' => 'Modul kosong "'.$row->modul_nama.'" berhasil dihapus.'));
     }
 
+    function download_template(){
+        $this->load->library('excel');
+        $objPHPExcel = new PHPExcel();
+        $sheet = $objPHPExcel->getActiveSheet();
+        $sheet->setTitle('Template Topik');
+
+        $sheet->setCellValue('A1', 'No')
+              ->setCellValue('B1', 'Mata Pelajaran')
+              ->setCellValue('C1', 'Kelas / Tingkat')
+              ->setCellValue('D1', 'Deskripsi (Opsional)');
+
+        // Contoh baris siap timpa oleh staf TU
+        $contoh = array(
+            array(1, 'Bahasa Indonesia', 'XII TKJ', 'SAS Ganjil - Mapel Umum'),
+            array(2, 'Administrasi Infrastruktur Jaringan', 'XI TKJ', 'SAS Ganjil - Produktif TKJ'),
+            array(3, 'Matematika', 'X Semua', 'SAS Ganjil - Lintas Jurusan Kelas X')
+        );
+        $rowNum = 2;
+        foreach($contoh as $c){
+            $sheet->setCellValue('A'.$rowNum, $c[0])
+                  ->setCellValue('B'.$rowNum, $c[1])
+                  ->setCellValue('C'.$rowNum, $c[2])
+                  ->setCellValue('D'.$rowNum, $c[3]);
+            $rowNum++;
+        }
+
+        // Styling header & lebar kolom
+        $sheet->getStyle('A1:D1')->getFont()->setBold(true);
+        $sheet->getStyle('A1:D1')->getFill()->setFillType(PHPExcel_Style_Fill::FILL_SOLID)
+              ->getStartColor()->setRGB('D1FAE5');
+        $sheet->getColumnDimension('A')->setWidth(6);
+        $sheet->getColumnDimension('B')->setWidth(36);
+        $sheet->getColumnDimension('C')->setWidth(20);
+        $sheet->getColumnDimension('D')->setWidth(38);
+
+        if(ob_get_length()){
+            ob_end_clean();
+        }
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="template_import_topik_zyacbt.xlsx"');
+        header('Cache-Control: max-age=0');
+
+        $writer = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel2007');
+        $writer->save('php://output');
+        exit;
+    }
+
+    function import_excel(){
+        $modul_id = (int)$this->input->post('import-modul-id', TRUE);
+        if($modul_id <= 0 || $this->cbt_modul_model->count_by_kolom('modul_id', $modul_id)->row()->hasil == 0){
+            echo json_encode(array('status' => 0, 'pesan' => 'Modul tujuan tidak valid.'));
+            return;
+        }
+
+        if(empty($_FILES['file-excel']['name'])){
+            echo json_encode(array('status' => 0, 'pesan' => 'Pilih file Excel (.xlsx / .xls) terlebih dahulu.'));
+            return;
+        }
+
+        $config['upload_path'] = './public/uploads/';
+        $config['allowed_types'] = 'xls|xlsx';
+        $config['max_size'] = 5120;
+        $config['overwrite'] = true;
+        $config['file_name'] = 'import_topik_'.time();
+
+        $this->load->library('upload', $config);
+        if(!$this->upload->do_upload('file-excel')){
+            echo json_encode(array('status' => 0, 'pesan' => strip_tags($this->upload->display_errors())));
+            return;
+        }
+
+        $upload_data = $this->upload->data();
+        $file_path = $upload_data['full_path'];
+
+        try {
+            $this->load->library('excel');
+            $excel = PHPExcel_IOFactory::load($file_path);
+            $worksheet = $excel->getSheet(0);
+            $highestRow = $worksheet->getHighestRow();
+
+            $sukses = 0;
+            $duplikat = 0;
+            $kosong = 0;
+            $daftar_duplikat = array();
+
+            for($row = 2; $row <= $highestRow; $row++){
+                $mapel = trim(strip_tags((string)$worksheet->getCellByColumnAndRow(1, $row)->getValue()));
+                $kelas = trim(strip_tags((string)$worksheet->getCellByColumnAndRow(2, $row)->getValue()));
+                $deskripsi = trim(strip_tags((string)$worksheet->getCellByColumnAndRow(3, $row)->getValue()));
+
+                if($mapel === ''){
+                    $kosong++;
+                    continue;
+                }
+
+                $topik_nama = ($kelas !== '') ? ($mapel.' - '.$kelas) : $mapel;
+                if(strlen($topik_nama) > 255){
+                    $topik_nama = substr($topik_nama, 0, 255);
+                }
+                if($deskripsi === ''){
+                    $deskripsi = ($kelas !== '') ? ('Mata Pelajaran '.$mapel.' ('.$kelas.')') : ('Mata Pelajaran '.$mapel);
+                }
+
+                // Pengaman duplikat per modul
+                if($this->cbt_topik_model->count_by_topik_modul($topik_nama, $modul_id)->row()->hasil > 0){
+                    $duplikat++;
+                    if(count($daftar_duplikat) < 8){
+                        $daftar_duplikat[] = $topik_nama;
+                    }
+                    continue;
+                }
+
+                $this->cbt_topik_model->save(array(
+                    'topik_modul_id' => $modul_id,
+                    'topik_nama' => $topik_nama,
+                    'topik_detail' => $deskripsi,
+                    'topik_aktif' => 1
+                ));
+                $sukses++;
+            }
+
+            if(file_exists($file_path)){
+                @unlink($file_path);
+            }
+
+            $pesan = 'Import selesai: <strong>'.$sukses.'</strong> topik ditambahkan';
+            if($duplikat > 0){
+                $pesan .= ', <strong>'.$duplikat.'</strong> dilewati (sudah ada di modul ini)';
+                if(!empty($daftar_duplikat)){
+                    $pesan .= '<br /><small>Duplikat: '.htmlspecialchars(implode(', ', $daftar_duplikat), ENT_QUOTES, 'UTF-8').($duplikat > count($daftar_duplikat) ? ', ...' : '').'</small>';
+                }
+            }
+            if($sukses == 0 && $duplikat == 0){
+                echo json_encode(array('status' => 0, 'pesan' => 'Tidak ada data topik yang terbaca. Pastikan kolom B (Mata Pelajaran) mulai baris 2 sudah diisi sesuai template.'));
+                return;
+            }
+            echo json_encode(array(
+                'status' => 1,
+                'sukses' => $sukses,
+                'duplikat' => $duplikat,
+                'kosong' => $kosong,
+                'pesan' => $pesan
+            ));
+        } catch (Exception $e) {
+            if(file_exists($file_path)){
+                @unlink($file_path);
+            }
+            echo json_encode(array('status' => 0, 'pesan' => 'Gagal membaca file Excel: '.$e->getMessage()));
+        }
+    }
+
+    function salin_topik(){
+        $sumber_id = (int)$this->input->post('sumber-modul-id', TRUE);
+        $tujuan_id = (int)$this->input->post('tujuan-modul-id', TRUE);
+
+        if($sumber_id <= 0 || $tujuan_id <= 0){
+            echo json_encode(array('status' => 0, 'pesan' => 'Pilih Modul sumber dan tujuan yang valid.'));
+            return;
+        }
+        if($sumber_id === $tujuan_id){
+            echo json_encode(array('status' => 0, 'pesan' => 'Modul sumber dan tujuan tidak boleh sama.'));
+            return;
+        }
+
+        $q_sumber = $this->cbt_topik_model->get_by_kolom('topik_modul_id', $sumber_id);
+        if($q_sumber->num_rows() == 0){
+            echo json_encode(array('status' => 0, 'pesan' => 'Modul sumber belum memiliki Topik untuk disalin.'));
+            return;
+        }
+
+        $sukses = 0;
+        $duplikat = 0;
+        foreach($q_sumber->result() as $t){
+            if($this->cbt_topik_model->count_by_topik_modul($t->topik_nama, $tujuan_id)->row()->hasil > 0){
+                $duplikat++;
+                continue;
+            }
+            $this->cbt_topik_model->save(array(
+                'topik_modul_id' => $tujuan_id,
+                'topik_nama' => $t->topik_nama,
+                'topik_detail' => $t->topik_detail,
+                'topik_aktif' => 1
+            ));
+            $sukses++;
+        }
+
+        $pesan = 'Berhasil menyalin <strong>'.$sukses.'</strong> nama topik ke modul aktif (0 soal).';
+        if($duplikat > 0){
+            $pesan .= ' <strong>'.$duplikat.'</strong> topik dilewati karena sudah ada.';
+        }
+        echo json_encode(array(
+            'status' => 1,
+            'sukses' => $sukses,
+            'duplikat' => $duplikat,
+            'pesan' => $pesan
+        ));
+    }
+
     function tambah(){
         $this->load->library('form_validation');
         

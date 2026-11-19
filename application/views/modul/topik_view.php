@@ -46,9 +46,9 @@
                     <div class="box-header with-border">
     						<div class="box-title">Daftar Topik</div>
     						<div class="box-tools pull-right">
-    							<div class="dropdown pull-right">
-    								<a style="cursor: pointer;" onclick="tambah()">Tambah Topik</a>
-    							</div>
+    							<button type="button" class="btn btn-primary btn-xs" onclick="tambah()"><i class="fa fa-plus"></i> Tambah Topik</button>
+    							<button type="button" class="btn btn-success btn-xs" onclick="buka_import_topik()" style="margin-left:3px;"><i class="fa fa-file-excel-o"></i> Import Excel</button>
+    							<button type="button" class="btn btn-info btn-xs" onclick="buka_salin_topik()" style="margin-left:3px;"><i class="fa fa-copy"></i> Salin dari Modul</button>
     						</div>
                     </div><!-- /.box-header -->
 
@@ -82,8 +82,8 @@
                         </form>                       
                     </div>
                     <div class="box-footer">
-                        <button type="button" id="btn-edit-hapus" class="btn btn-primary" title="Hapus Siswa yang dipilih">Hapus</button>
-                        <button type="button" id="btn-edit-pilih" class="btn btn-default pull-right">Pilih Semua</button>
+                        <button type="button" id="btn-edit-hapus" class="btn btn-danger" title="Hapus Topik yang dipilih"><i class="fa fa-trash"></i> Hapus</button>
+                        <button type="button" id="btn-edit-pilih" class="btn btn-default pull-right"><i class="fa fa-check-square-o"></i> Pilih Semua</button>
                     </div>
                 </div>
         </div>
@@ -240,6 +240,71 @@
             </div>
         </div>
     </div>
+
+    <div class="modal" id="modal-import-topik" data-backdrop="static" tabindex="-1" role="dialog" aria-labelledby="basicModal" aria-hidden="true">
+        <form id="form-import-topik" enctype="multipart/form-data">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button class="close" type="button" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title"><i class="fa fa-file-excel-o"></i> Import Daftar Topik dari Excel</h4>
+                </div>
+                <div class="modal-body">
+                    <div id="form-pesan-import"></div>
+                    <div class="callout callout-info" style="margin-bottom:12px;padding:10px 15px;">
+                        <p style="margin-bottom:6px;"><strong>Modul Tujuan:</strong> <span id="import-modul-label" class="label label-primary"></span></p>
+                        <p style="margin-bottom:6px;font-size:12px;">Format kolom: <code>No</code> | <code>Mata Pelajaran</code> | <code>Kelas / Tingkat</code> | <code>Deskripsi (Opsional)</code>.<br />Otomatis digabung menjadi: <strong>Mata Pelajaran - Kelas / Tingkat</strong>.</p>
+                        <a href="<?php echo site_url().'/'.$url; ?>/download_template" class="btn btn-success btn-xs"><i class="fa fa-download"></i> Download Template Excel (.xlsx)</a>
+                    </div>
+                    <div class="form-group">
+                        <label>Pilih File Excel (.xlsx / .xls)</label>
+                        <input type="hidden" name="import-modul-id" id="import-modul-id">
+                        <input type="file" name="file-excel" id="file-excel-topik" class="form-control" accept=".xls,.xlsx">
+                        <p class="help-block" style="margin-bottom:0;">
+                            <i class="fa fa-shield text-success"></i> <strong>Anti-Duplikat Aktif:</strong> Topik yang namanya sudah ada di modul ini otomatis dilewati.
+                        </p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" id="btn-submit-import" class="btn btn-success"><i class="fa fa-upload"></i> Mulai Import</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Tutup</button>
+                </div>
+            </div>
+        </div>
+        </form>
+    </div>
+
+    <div class="modal" id="modal-salin-topik" data-backdrop="static" tabindex="-1" role="dialog" aria-labelledby="basicModal" aria-hidden="true">
+        <form id="form-salin-topik">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button class="close" type="button" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title"><i class="fa fa-copy"></i> Salin Daftar Topik dari Modul Lain</h4>
+                </div>
+                <div class="modal-body">
+                    <div id="form-pesan-salin"></div>
+                    <div class="form-group">
+                        <label>Modul Tujuan (Aktif / Terpilih)</label>
+                        <input type="hidden" name="tujuan-modul-id" id="salin-tujuan-id">
+                        <input type="text" id="salin-tujuan-nama" class="form-control input-sm" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Salin Nama Topik Dari Modul</label>
+                        <select name="sumber-modul-id" id="salin-sumber-id" class="form-control input-sm"></select>
+                        <p class="help-block" style="margin-bottom:0;">
+                            Hanya menyalin <strong>nama &amp; deskripsi topik</strong> saja (jumlah soal mulai dari 0). Topik yang sudah ada di modul tujuan otomatis dilewati.
+                        </p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" id="btn-submit-salin" class="btn btn-info"><i class="fa fa-copy"></i> Salin Daftar Topik</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Tutup</button>
+                </div>
+            </div>
+        </div>
+        </form>
+    </div>
 </section><!-- /.content -->
 
 
@@ -258,6 +323,42 @@
         $('#input-modul-nama').val('');
         $('#modal-kelola-modul').modal('show');
         load_daftar_modul($('#modul').val());
+    }
+
+    function buka_import_topik(){
+        var modulId = $('#modul').val();
+        var modulNama = $('#modul option:selected').text();
+        $('#import-modul-id').val(modulId);
+        $('#import-modul-label').text(modulNama);
+        $('#file-excel-topik').val('');
+        $('#form-pesan-import').html('');
+        $('#modal-import-topik').modal('show');
+    }
+
+    function buka_salin_topik(){
+        var tujuanId = $('#modul').val();
+        var tujuanNama = $('#modul option:selected').text();
+        $('#salin-tujuan-id').val(tujuanId);
+        $('#salin-tujuan-nama').val(tujuanNama);
+        $('#form-pesan-salin').html('');
+        $('#salin-sumber-id').html('<option value="">Memuat daftar modul...</option>');
+        $('#modal-salin-topik').modal('show');
+
+        $.getJSON('<?php echo site_url().'/'.$url; ?>/get_daftar_modul', function(res){
+            var opts = '';
+            if(res.status == 1 && res.data){
+                $.each(res.data, function(idx, m){
+                    if(String(m.modul_id) !== String(tujuanId)){
+                        var statusTxt = (m.modul_aktif == 1) ? 'Aktif' : 'Arsip';
+                        opts += '<option value="'+m.modul_id+'">'+escape_html(m.modul_nama)+' ('+m.jml_topik+' topik - '+statusTxt+')</option>';
+                    }
+                });
+            }
+            if(opts === ''){
+                opts = '<option value="">Belum ada modul lain untuk disalin</option>';
+            }
+            $('#salin-sumber-id').html(opts);
+        });
     }
 
     function load_daftar_modul(selectId){
@@ -426,6 +527,58 @@
                         load_daftar_modul(obj.modul_id);
                     }else{
                         $('#form-pesan-modul').html(pesan_err(obj.pesan));
+                    }
+                }
+            });
+            return false;
+        });
+
+        $('#form-import-topik').submit(function(){
+            var fd = new FormData(this);
+            $("#modal-proses").modal('show');
+            $.ajax({
+                url: '<?php echo site_url().'/'.$url; ?>/import_excel',
+                type: 'POST',
+                data: fd,
+                contentType: false,
+                processData: false,
+                cache: false,
+                success: function(respon){
+                    $("#modal-proses").modal('hide');
+                    var obj = $.parseJSON(respon);
+                    if(obj.status == 1){
+                        $('#form-pesan-import').html('<div class="alert alert-success">'+obj.pesan+'</div>');
+                        $('#file-excel-topik').val('');
+                        refresh_table();
+                        notify_success('Import topik selesai.');
+                    }else{
+                        $('#form-pesan-import').html(pesan_err(obj.pesan));
+                    }
+                },
+                error: function(){
+                    $("#modal-proses").modal('hide');
+                    $('#form-pesan-import').html(pesan_err('Gagal menghubungi server saat import Excel.'));
+                }
+            });
+            return false;
+        });
+
+        $('#form-salin-topik').submit(function(){
+            $("#modal-proses").modal('show');
+            $.ajax({
+                url: '<?php echo site_url().'/'.$url; ?>/salin_topik',
+                type: 'POST',
+                data: $('#form-salin-topik').serialize(),
+                cache: false,
+                success: function(respon){
+                    $("#modal-proses").modal('hide');
+                    var obj = $.parseJSON(respon);
+                    if(obj.status == 1){
+                        $('#form-pesan-salin').html('<div class="alert alert-success">'+obj.pesan+'</div>');
+                        refresh_table();
+                        notify_success('Daftar topik berhasil disalin.');
+                    }else{
+                        $('#form-pesan-salin').html(pesan_err(obj.pesan));
                     }
                 }
             });
