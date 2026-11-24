@@ -95,7 +95,10 @@ class Modul_import_word extends Member_Controller {
 			$daftar_soal = $this->input->post('import-soal', false);
 			
 			$doc = new DOMDocument();
-			$doc->loadHTML($daftar_soal);
+			$prev_err = libxml_use_internal_errors(true);
+			$doc->loadHTML('<?xml encoding="UTF-8">' . $daftar_soal);
+			libxml_clear_errors();
+			libxml_use_internal_errors($prev_err);
 			$tables = $doc->getElementsByTagName('table');
 			if(!empty($tables->item(0)->nodeValue)){
 				$rows = $tables->item(0)->getElementsByTagName('tr');
@@ -465,7 +468,7 @@ class Modul_import_word extends Member_Controller {
 		$i=$start;
 
 		$output = array(
-			"sEcho" => intval($_GET['sEcho']),
+			"sEcho" => isset($_GET['sEcho']) ? intval($_GET['sEcho']) : 1,
 	        "iTotalRecords" => $iTotal,
 	        "iTotalDisplayRecords" => $iTotal,
 	        "aaData" => array()
@@ -534,8 +537,8 @@ class Modul_import_word extends Member_Controller {
 
 	function get_sort_dir() {
 		$sort_dir = "ASC";
-		$sdir = strip_tags($_GET['sSortDir_0']);
-		if (isset($sdir)) {
+		if (isset($_GET['sSortDir_0'])) {
+			$sdir = strip_tags($_GET['sSortDir_0']);
 			if ($sdir != "asc" ) {
 				$sort_dir = "DESC";
 			}
@@ -1587,7 +1590,8 @@ class Modul_import_word extends Member_Controller {
 
 				$jenis_raw = trim((string) $cells[1]->textContent);
 				$jenis = strtoupper(preg_replace('/\s+/', '', $jenis_raw));
-				if ($jenis !== 'SOAL' && $jenis !== 'JAWABAN') {
+				$is_explicit_esai = in_array($jenis, array('ESAI', 'ESSAY', 'URAIAN'), true);
+				if ($jenis !== 'SOAL' && $jenis !== 'JAWABAN' && !$is_explicit_esai) {
 					continue;
 				}
 				if ($jenis === 'JAWABAN' && count($cells) < 4) {
@@ -1608,13 +1612,14 @@ class Modul_import_word extends Member_Controller {
 					$img_count += $imgs->length;
 				}
 
-				if ($jenis === 'SOAL') {
+				if ($jenis === 'SOAL' || $is_explicit_esai) {
 					$tbl_items[] = array(
 						'soal_html' => $html,
 						'jawaban' => array(),
-						'col_count' => count($cells)
+						'col_count' => count($cells),
+						'force_esai' => $is_explicit_esai
 					);
-					$current_idx = count($tbl_items) - 1;
+					$current_idx = $is_explicit_esai ? -1 : (count($tbl_items) - 1);
 				} elseif ($jenis === 'JAWABAN' && $current_idx >= 0) {
 					$tbl_has_jawaban = true;
 					$kunci_raw = preg_replace('/\s+/', '', (string) $cells[3]->textContent);
@@ -1634,7 +1639,7 @@ class Modul_import_word extends Member_Controller {
 			if (!empty($tbl_items)) {
 				if ($tbl_has_jawaban) {
 					foreach ($tbl_items as $ti) {
-						if (empty($ti['jawaban']) && isset($ti['col_count']) && $ti['col_count'] === 3) {
+						if (!empty($ti['force_esai']) || (empty($ti['jawaban']) && isset($ti['col_count']) && $ti['col_count'] === 3)) {
 							$esai_items[] = $ti;
 						} else {
 							$pg_items[] = $ti;
@@ -1814,7 +1819,8 @@ class Modul_import_word extends Member_Controller {
 
 				$jenis_raw = trim((string) $cells->item(1)->textContent);
 				$jenis = strtoupper(preg_replace('/\s+/', '', $jenis_raw));
-				if ($jenis !== 'SOAL' && $jenis !== 'JAWABAN') {
+				$is_explicit_esai = in_array($jenis, array('ESAI', 'ESSAY', 'URAIAN'), true);
+				if ($jenis !== 'SOAL' && $jenis !== 'JAWABAN' && !$is_explicit_esai) {
 					continue;
 				}
 				if ($jenis === 'JAWABAN' && $cells->length < 4) {
@@ -1835,13 +1841,14 @@ class Modul_import_word extends Member_Controller {
 					$used_rids[$rid] = true;
 				}
 
-				if ($jenis === 'SOAL') {
+				if ($jenis === 'SOAL' || $is_explicit_esai) {
 					$tbl_items[] = array(
 						'soal_html' => $html,
 						'jawaban' => array(),
-						'col_count' => $cells->length
+						'col_count' => $cells->length,
+						'force_esai' => $is_explicit_esai
 					);
-					$current_idx = count($tbl_items) - 1;
+					$current_idx = $is_explicit_esai ? -1 : (count($tbl_items) - 1);
 				} elseif ($jenis === 'JAWABAN' && $current_idx >= 0) {
 					$tbl_has_jawaban = true;
 					$kunci_raw = preg_replace('/\s+/', '', (string) $cells->item(3)->textContent);
@@ -1861,7 +1868,7 @@ class Modul_import_word extends Member_Controller {
 			if (!empty($tbl_items)) {
 				if ($tbl_has_jawaban) {
 					foreach ($tbl_items as $ti) {
-						if (empty($ti['jawaban']) && isset($ti['col_count']) && $ti['col_count'] === 3) {
+						if (!empty($ti['force_esai']) || (empty($ti['jawaban']) && isset($ti['col_count']) && $ti['col_count'] === 3)) {
 							$esai_items[] = $ti;
 						} else {
 							$items[] = $ti;

@@ -92,7 +92,7 @@ class Laporan_rekap_hasil extends Member_Controller {
             	$row = 9;
             	foreach ($query_user as $user) {
             		$worksheet->setCellValueByColumnAndRow(0, $row, ($row-8));
-                    $worksheet->setCellValueByColumnAndRow(1, $row, stripslashes($user->user_firstname));
+                    $worksheet->setCellValueByColumnAndRow(1, $row, stripslashes((string)$user->user_firstname));
                     $worksheet->setCellValueByColumnAndRow(2, $row, $nama_grup);
 
                     $kolom = 4;
@@ -114,7 +114,11 @@ class Laporan_rekap_hasil extends Member_Controller {
             }
         }
 
-        $filename = 'Data Rekap Hasil Tes - '.$nama_grup.'.xlsx'; //save our workbook as this file name
+        if(ob_get_length()){
+            ob_end_clean();
+        }
+        $safe_grup = preg_replace('/[\\\\\/:\*\?"<>\|]/', '-', (string)$nama_grup);
+        $filename = 'Data Rekap Hasil Tes - '.$safe_grup.'.xlsx'; //save our workbook as this file name
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); //mime type
         header('Content-Disposition: attachment;filename="'.$filename.'"'); //tell browser what's the file name
         header('Cache-Control: max-age=0'); //no cache

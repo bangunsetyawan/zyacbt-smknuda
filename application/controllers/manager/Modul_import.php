@@ -233,8 +233,8 @@ class Modul_import extends Member_Controller {
 
 	function get_sort_dir() {
 		$sort_dir = "ASC";
-		$sdir = strip_tags($_GET['sSortDir_0']);
-		if (isset($sdir)) {
+		if (isset($_GET['sSortDir_0'])) {
+			$sdir = strip_tags($_GET['sSortDir_0']);
 			if ($sdir != "asc" ) {
 				$sort_dir = "DESC";
 			}

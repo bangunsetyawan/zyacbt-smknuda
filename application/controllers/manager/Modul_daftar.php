@@ -280,7 +280,7 @@ class Modul_daftar extends Member_Controller {
 		$iTotal= $this->cbt_soal_model->get_datatable_count('soal_detail', $search, $topik)->row()->hasil;
 	    
 		$output = array(
-			"sEcho" => intval($_GET['sEcho']),
+			"sEcho" => isset($_GET['sEcho']) ? intval($_GET['sEcho']) : 1,
 	        "iTotalRecords" => $iTotal,
 	        "iTotalDisplayRecords" => $iTotal,
 	        "aaData" => array()
@@ -355,7 +355,7 @@ class Modul_daftar extends Member_Controller {
             	$jawaban_table = $jawaban_table.'
 	            			<tr style="background-color:#eafaf1;">
 		                      	<td width="120"><b>Kunci Jawaban</b></td>
-		                      	<td colspan="3">'.htmlspecialchars($temp->soal_kunci, ENT_QUOTES, 'UTF-8').'</td>
+		                      	<td colspan="3">'.htmlspecialchars((string)$temp->soal_kunci, ENT_QUOTES, 'UTF-8').'</td>
 		                    </tr>
 	            		';
             }
@@ -403,8 +403,8 @@ class Modul_daftar extends Member_Controller {
 
 	function get_sort_dir() {
 		$sort_dir = "ASC";
-		$sdir = strip_tags($_GET['sSortDir_0']);
-		if (isset($sdir)) {
+		if (isset($_GET['sSortDir_0'])) {
+			$sdir = strip_tags($_GET['sSortDir_0']);
 			if ($sdir != "asc" ) {
 				$sort_dir = "DESC";
 			}

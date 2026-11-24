@@ -82,7 +82,7 @@ class Peserta_daftar extends Member_Controller {
         $this->form_validation->set_rules('tambah-group', 'Nama Kelas (Group)', 'required|trim|strip_tags|max_length[255]');
 
         if($this->form_validation->run() == TRUE){
-            $nama = preg_replace('/\s+/', ' ', trim($this->input->post('tambah-group', true)));
+            $nama = preg_replace('/\s+/', ' ', trim((string)$this->input->post('tambah-group', true)));
             if($nama === ''){
                 echo json_encode(array('status' => 0, 'pesan' => 'Nama Kelas tidak boleh kosong.'));
                 return;
@@ -113,7 +113,7 @@ class Peserta_daftar extends Member_Controller {
 
         if($this->form_validation->run() == TRUE){
             $id = (int)$this->input->post('edit-grup-id', true);
-            $nama = preg_replace('/\s+/', ' ', trim($this->input->post('edit-grup-nama', true)));
+            $nama = preg_replace('/\s+/', ' ', trim((string)$this->input->post('edit-grup-nama', true)));
 
             $existing = $this->cbt_user_grup_model->get_by_kolom_limit('grup_id', $id, 1);
             if($existing->num_rows() == 0){
@@ -213,11 +213,11 @@ class Peserta_daftar extends Member_Controller {
         $this->form_validation->set_rules('tambah-group', 'Kelas (Group)','required|integer');
         
         if($this->form_validation->run() == TRUE){
-        	$data['user_name'] = trim($this->input->post('tambah-username', true));
-            $data['user_password'] = trim($this->input->post('tambah-password', true));
-            $data['user_email'] = trim($this->input->post('tambah-email', true));
-            $data['user_firstname'] = trim($this->input->post('tambah-nama', true));
-			$data['user_detail'] = substr(trim($this->input->post('tambah-detail', true)), 0, 25);
+        	$data['user_name'] = trim((string)$this->input->post('tambah-username', true));
+            $data['user_password'] = trim((string)$this->input->post('tambah-password', true));
+            $data['user_email'] = trim((string)$this->input->post('tambah-email', true));
+            $data['user_firstname'] = trim((string)$this->input->post('tambah-nama', true));
+			$data['user_detail'] = substr(trim((string)$this->input->post('tambah-detail', true)), 0, 25);
             $data['user_grup_id'] = (int)$this->input->post('tambah-group', true);
 
             if($this->cbt_user_grup_model->count_by_kolom('grup_id', $data['user_grup_id'])->row()->hasil>0){
@@ -256,7 +256,7 @@ class Peserta_daftar extends Member_Controller {
 				$data['id'] = $query->user_id;
 				$data['username'] = $query->user_name;
 				$data['password'] = $query->user_password;
-				$data['nama'] = stripslashes($query->user_firstname);
+				$data['nama'] = stripslashes((string)$query->user_firstname);
 				$data['email'] = $query->user_email;
 				$data['detail'] = $query->user_detail;
 				$data['group'] = $query->user_grup_id;
@@ -313,11 +313,11 @@ class Peserta_daftar extends Member_Controller {
 				$status['pesan'] = 'Data Peserta berhasil dihapus !';
 
             }else if($pilihan=='simpan'){
-                $data['user_password'] = trim($this->input->post('edit-password', true));
-                $data['user_firstname'] = trim($this->input->post('edit-nama', true));
-                $data['user_email'] = trim($this->input->post('edit-email', true));
+                $data['user_password'] = trim((string)$this->input->post('edit-password', true));
+                $data['user_firstname'] = trim((string)$this->input->post('edit-nama', true));
+                $data['user_email'] = trim((string)$this->input->post('edit-email', true));
                 $data['user_grup_id'] = (int)$this->input->post('edit-group', true);
-				$data['user_detail'] = substr(trim($this->input->post('edit-detail', true)), 0, 25);
+				$data['user_detail'] = substr(trim((string)$this->input->post('edit-detail', true)), 0, 25);
 
                 $this->cbt_user_model->update('user_id', $id, $data);
 
@@ -382,7 +382,7 @@ class Peserta_daftar extends Member_Controller {
             
 			$record[] = ++$i;
             $record[] = '<code>'.html_escape($temp->user_name).'</code>';
-            $record[] = '<strong>'.html_escape(stripslashes($temp->user_firstname)).'</strong>';
+            $record[] = '<strong>'.html_escape(stripslashes((string)$temp->user_firstname)).'</strong>';
             $record[] = '<span class="label label-primary" style="font-size:11.5px;">'.html_escape($temp->grup_nama ? $temp->grup_nama : '-').'</span>';
 			$record[] = !empty($temp->user_detail) ? html_escape($temp->user_detail) : '<span class="text-muted">-</span>';
             $record[] = '<button type="button" onclick="edit(\''.(int)$temp->user_id.'\')" class="btn btn-default btn-xs"><i class="fa fa-pencil"></i> Edit</button>';

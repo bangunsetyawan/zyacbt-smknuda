@@ -246,7 +246,7 @@ class Tes_evaluasi extends Member_Controller {
         $tesuser_id_out = (int)$row->tessoal_tesuser_id;
         $tid = (int)$row->tes_id;
         if(!isset($bounds_cache[$tid])){
-            $bounds_cache[$tid] = $this->_get_essay_score_bounds($tid, $row->tes_score_right, $row->tes_max_score);
+            $bounds_cache[$tid] = $this->_get_essay_score_bounds($row, $tid);
         }
         return $bounds_cache[$tid];
     }
@@ -485,7 +485,7 @@ class Tes_evaluasi extends Member_Controller {
 			$record[] = '<div class="text-center"><strong>'.(++$i).'</strong></div>';
 
 			// 2. Kolom Peserta & Kelas
-			$nama_siswa = html_escape(stripslashes($temp->user_firstname));
+			$nama_siswa = html_escape(stripslashes((string)$temp->user_firstname));
 			$nis_siswa  = html_escape($temp->user_name);
 			$kelas_str  = !empty($temp->grup_nama) ? html_escape($temp->grup_nama) : '-';
 			$ruang_str  = !empty($temp->user_detail) ? ' &bull; '.html_escape($temp->user_detail) : '';
@@ -511,7 +511,7 @@ class Tes_evaluasi extends Member_Controller {
 			// 3. Kolom Soal & Jawaban Siswa
 			$soal_html = str_replace("[base_url]", base_url(), $temp->soal_detail);
 			$kunci_box = '';
-			if(!empty($temp->soal_kunci) && trim($temp->soal_kunci) !== ''){
+			if(!empty($temp->soal_kunci) && trim((string)$temp->soal_kunci) !== ''){
 				$kunci_box = '<div class="ev-key-box"><i class="fa fa-key"></i> <strong>Kunci / Rubrik:</strong> '.nl2br(html_escape($temp->soal_kunci)).'</div>';
 			}
 

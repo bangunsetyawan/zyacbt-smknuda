@@ -116,8 +116,8 @@ class Useratur extends Member_Controller {
             }else if($aksi==1){//simpan
                 $data_user['nama'] = $this->input->post('nama', true);
                 $data_user['level'] = $this->input->post('level', true);
-                $data_user['opsi1'] = strtoupper($this->input->post('opsi1', true));
-                $data_user['opsi2'] = strtoupper($this->input->post('opsi2', true));
+                $data_user['opsi1'] = strtoupper((string)$this->input->post('opsi1', true));
+                $data_user['opsi2'] = strtoupper((string)$this->input->post('opsi2', true));
                 $data_user['keterangan'] = $this->input->post('keterangan', true);
                 
                 $password = $this->input->post('password', true);
@@ -201,7 +201,7 @@ class Useratur extends Member_Controller {
 		$iTotal=$this->users_model->get_all_user_count($search)->row()->hasil;
 	    
 		$output = array(
-			"sEcho" => intval($_GET['sEcho']),
+			"sEcho" => isset($_GET['sEcho']) ? intval($_GET['sEcho']) : 1,
 	        "iTotalRecords" => $iTotal,
 	        "iTotalDisplayRecords" => $iTotal,
 	        "aaData" => array()
@@ -273,7 +273,7 @@ class Useratur extends Member_Controller {
         $iTotal= $this->cbt_topik_model->get_datatable_count('topik_nama', $search, $modul)->row()->hasil;
         
         $output = array(
-            "sEcho" => intval($_GET['sEcho']),
+            "sEcho" => isset($_GET['sEcho']) ? intval($_GET['sEcho']) : 1,
             "iTotalRecords" => $iTotal,
             "iTotalDisplayRecords" => $iTotal,
             "aaData" => array()
@@ -332,8 +332,8 @@ class Useratur extends Member_Controller {
 
 	function get_sort_dir() {
 		$sort_dir = "ASC";
-		$sdir = strip_tags($_GET['sSortDir_0']);
-		if (isset($sdir)) {
+		if (isset($_GET['sSortDir_0'])) {
+			$sdir = strip_tags($_GET['sSortDir_0']);
 			if ($sdir != "asc" ) {
 				$sort_dir = "DESC";
 			}

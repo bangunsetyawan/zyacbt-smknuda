@@ -130,7 +130,7 @@ class Peserta_group extends Member_Controller {
 		$iTotal= $this->cbt_user_grup_model->get_datatable_count('grup_nama', $search)->row()->hasil;
 	    
 		$output = array(
-			"sEcho" => intval($_GET['sEcho']),
+			"sEcho" => isset($_GET['sEcho']) ? intval($_GET['sEcho']) : 1,
 	        "iTotalRecords" => $iTotal,
 	        "iTotalDisplayRecords" => $iTotal,
 	        "aaData" => array()
@@ -185,8 +185,8 @@ class Peserta_group extends Member_Controller {
 
 	function get_sort_dir() {
 		$sort_dir = "ASC";
-		$sdir = strip_tags($_GET['sSortDir_0']);
-		if (isset($sdir)) {
+		if (isset($_GET['sSortDir_0'])) {
+			$sdir = strip_tags($_GET['sSortDir_0']);
 			if ($sdir != "asc" ) {
 				$sort_dir = "DESC";
 			}

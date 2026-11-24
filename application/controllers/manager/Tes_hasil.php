@@ -149,14 +149,17 @@ class Tes_hasil extends Member_Controller {
                     $worksheet->setCellValueByColumnAndRow(1, $row, $temp->tesuser_creation_time);
                     $worksheet->setCellValueByColumnAndRow(2, $row, $temp->tes_nama);
                     $worksheet->setCellValueByColumnAndRow(3, $row, $temp->user_name);
-                    $worksheet->setCellValueByColumnAndRow(4, $row, stripslashes($temp->user_firstname));
+                    $worksheet->setCellValueByColumnAndRow(4, $row, stripslashes((string)$temp->user_firstname));
                     $worksheet->setCellValueByColumnAndRow(5, $row, $temp->grup_nama);
                     $worksheet->setCellValueByColumnAndRow(6, $row, $temp->nilai);
 
                     $row++;
                 }
             }
-            $filename='Data Hasil Tes - '.date('Y-m-d H:i').'.xlsx'; //save our workbook as this file name
+            if(ob_get_length()){
+                ob_end_clean();
+            }
+            $filename='Data Hasil Tes - '.date('Y-m-d H-i').'.xlsx'; //save our workbook as this file name
             header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); //mime type
             header('Content-Disposition: attachment;filename="'.$filename.'"'); //tell browser what's the file name
             header('Cache-Control: max-age=0'); //no cache
@@ -204,7 +207,7 @@ class Tes_hasil extends Member_Controller {
 		$iFilteredTotal = $query->num_rows();
 	    
 		$output = array(
-			"sEcho" => intval($_GET['sEcho']),
+			"sEcho" => isset($_GET['sEcho']) ? intval($_GET['sEcho']) : 1,
 	        "iTotalRecords" => $iTotal,
 	        "iTotalDisplayRecords" => $iTotal,
 	        "aaData" => array()
@@ -303,8 +306,8 @@ class Tes_hasil extends Member_Controller {
 
 	function get_sort_dir() {
 		$sort_dir = "ASC";
-		$sdir = strip_tags($_GET['sSortDir_0']);
-		if (isset($sdir)) {
+		if (isset($_GET['sSortDir_0'])) {
+			$sdir = strip_tags($_GET['sSortDir_0']);
 			if ($sdir != "asc" ) {
 				$sort_dir = "DESC";
 			}

@@ -92,7 +92,7 @@ class Laporan_analisis_butir_soal extends Member_Controller {
             	foreach ($query_user as $user) {
             		$worksheet->setCellValueByColumnAndRow(0, $row, ($row-7));
 					$worksheet->setCellValueByColumnAndRow(1, $row, $user->user_name);
-                    $worksheet->setCellValueByColumnAndRow(2, $row, stripslashes($user->user_firstname));
+                    $worksheet->setCellValueByColumnAndRow(2, $row, stripslashes((string)$user->user_firstname));
 
 					//Mengambil data jawaban yang telah dikerjakan
 					$query_soal_tes = $this->cbt_tes_soal_model->get_by_testuser_order_soal($user->tesuser_id);
@@ -114,7 +114,11 @@ class Laporan_analisis_butir_soal extends Member_Controller {
             }
         }
 
-        $filename = 'Analisis Butir Soal - '.$nama_grup.'.xlsx'; //save our workbook as this file name
+        if(ob_get_length()){
+            ob_end_clean();
+        }
+        $safe_grup = preg_replace('/[\\\\\/:\*\?"<>\|]/', '-', (string)$nama_grup);
+        $filename = 'Analisis Butir Soal - '.$safe_grup.'.xlsx'; //save our workbook as this file name
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); //mime type
         header('Content-Disposition: attachment;filename="'.$filename.'"'); //tell browser what's the file name
         header('Cache-Control: max-age=0'); //no cache

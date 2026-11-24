@@ -8,7 +8,7 @@ services:
     ports:
       - "${APP_PORT:-8085}:80"
     environment:
-      CI_ENV: ${CI_ENV:-development}
+      CI_ENV: ${CI_ENV:-production}
       APP_BASE_URL: ${APP_BASE_URL:-}
       DB_HOST: ${DB_HOST:-db}
       DB_USER: ${DB_USER:-zyacbt}
@@ -25,6 +25,12 @@ services:
     image: mariadb:10.11
     container_name: zyacbt-db
     restart: unless-stopped
+    command:
+      - --max-connections=300
+      - --innodb-buffer-pool-size=256M
+      - --innodb-flush-log-at-trx-commit=2
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
     environment:
       MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASS:-rootzyacbt123}
       MARIADB_DATABASE: ${DB_NAME:-zyacbtpublic}

@@ -102,7 +102,10 @@ class Modul_jawaban extends Member_Controller {
 	        $posisi = $this->config->item('upload_path').'/topik_'.$id_topik.'';
 
 	        $doc = new DOMDocument();
-			$doc->loadHTML($jawaban);
+			$prev_err = libxml_use_internal_errors(true);
+			$doc->loadHTML('<?xml encoding="UTF-8">' . $jawaban);
+			libxml_clear_errors();
+			libxml_use_internal_errors($prev_err);
 			$tags = $doc->getElementsByTagName('img');
 			foreach ($tags as $tag) {
 				$jawaban_image = $tag->getAttribute('src');
@@ -295,7 +298,7 @@ class Modul_jawaban extends Member_Controller {
 		$iTotal= $this->cbt_jawaban_model->get_datatable_count('jawaban_detail', $search, $soal)->row()->hasil;
 	    
 		$output = array(
-			"sEcho" => intval($_GET['sEcho']),
+			"sEcho" => isset($_GET['sEcho']) ? intval($_GET['sEcho']) : 1,
 	        "iTotalRecords" => $iTotal,
 	        "iTotalDisplayRecords" => $iTotal,
 	        "aaData" => array()
@@ -364,7 +367,7 @@ class Modul_jawaban extends Member_Controller {
 		$i=$start;
 
 		$output = array(
-			"sEcho" => intval($_GET['sEcho']),
+			"sEcho" => isset($_GET['sEcho']) ? intval($_GET['sEcho']) : 1,
 	        "iTotalRecords" => $iTotal,
 	        "iTotalDisplayRecords" => $iTotal,
 	        "aaData" => array()
@@ -433,8 +436,8 @@ class Modul_jawaban extends Member_Controller {
 
 	function get_sort_dir() {
 		$sort_dir = "ASC";
-		$sdir = strip_tags($_GET['sSortDir_0']);
-		if (isset($sdir)) {
+		if (isset($_GET['sSortDir_0'])) {
+			$sdir = strip_tags($_GET['sSortDir_0']);
 			if ($sdir != "asc" ) {
 				$sort_dir = "DESC";
 			}

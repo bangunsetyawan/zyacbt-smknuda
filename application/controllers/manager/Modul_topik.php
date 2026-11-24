@@ -80,7 +80,7 @@ class Modul_topik extends Member_Controller {
         $this->form_validation->set_rules('modul-nama', 'Nama Modul', 'required|trim|strip_tags|max_length[255]');
 
         if($this->form_validation->run() == TRUE){
-            $nama = trim($this->input->post('modul-nama', TRUE));
+            $nama = trim((string)$this->input->post('modul-nama', TRUE));
             if($this->cbt_modul_model->count_by_kolom('modul_nama', $nama)->row()->hasil > 0){
                 $status['status'] = 0;
                 $status['pesan'] = 'Nama Modul sudah ada. Gunakan nama lain.';
@@ -109,7 +109,7 @@ class Modul_topik extends Member_Controller {
 
         if($this->form_validation->run() == TRUE){
             $id = (int)$this->input->post('modul-id', TRUE);
-            $nama = trim($this->input->post('modul-nama', TRUE));
+            $nama = trim((string)$this->input->post('modul-nama', TRUE));
             $existing = $this->cbt_modul_model->get_by_kolom_limit('modul_id', $id, 1);
             if($existing->num_rows() == 0){
                 $status['status'] = 0;
@@ -561,7 +561,7 @@ class Modul_topik extends Member_Controller {
 		$iTotal= $this->cbt_topik_model->get_datatable_count('topik_nama', $search, $modul)->row()->hasil;
 	    
 		$output = array(
-			"sEcho" => intval($_GET['sEcho']),
+			"sEcho" => isset($_GET['sEcho']) ? intval($_GET['sEcho']) : 1,
 	        "iTotalRecords" => $iTotal,
 	        "iTotalDisplayRecords" => $iTotal,
 	        "aaData" => array()
@@ -627,8 +627,8 @@ class Modul_topik extends Member_Controller {
 
 	function get_sort_dir() {
 		$sort_dir = "ASC";
-		$sdir = strip_tags($_GET['sSortDir_0']);
-		if (isset($sdir)) {
+		if (isset($_GET['sSortDir_0'])) {
+			$sdir = strip_tags($_GET['sSortDir_0']);
 			if ($sdir != "asc" ) {
 				$sort_dir = "DESC";
 			}

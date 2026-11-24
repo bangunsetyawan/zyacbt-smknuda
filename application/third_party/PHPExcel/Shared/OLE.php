@@ -486,14 +486,14 @@ class PHPExcel_Shared_OLE
 		$res = '';
 
 		for ($i = 0; $i < 4; ++$i) {
-			$hex = $low_part % 0x100;
+			$hex = ((int)$low_part) % 0x100;
 			$res .= pack('c', $hex);
-			$low_part /= 0x100;
+			$low_part = floor($low_part / 0x100);
 		}
 		for ($i = 0; $i < 4; ++$i) {
-			$hex = $high_part % 0x100;
+			$hex = ((int)$high_part) % 0x100;
 			$res .= pack('c', $hex);
-			$high_part /= 0x100;
+			$high_part = floor($high_part / 0x100);
 		}
 		return $res;
 	}
