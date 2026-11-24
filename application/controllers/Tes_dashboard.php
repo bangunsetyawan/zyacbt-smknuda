@@ -263,6 +263,15 @@ class Tes_dashboard extends Tes_Controller {
         if($this->form_validation->run() == TRUE){
 			$tes_id = (int)$this->input->post('tes-id', TRUE);
 			$token = strtoupper(trim((string)$this->input->post('token', TRUE)));
+			$ikrar_setuju = (int)$this->input->post('ikrar-setuju', TRUE);
+			$ikrar_teks = preg_replace('/\s+/', ' ', strtolower(trim((string)$this->input->post('ikrar-teks', TRUE))));
+
+			if($ikrar_setuju !== 1 || $ikrar_teks !== 'saya berjanji'){
+				$status['status'] = 0;
+				$status['pesan'] = 'Silahkan centang persetujuan Ikrar Asesmen dan ketik "Saya berjanji" dengan benar.';
+				echo json_encode($status);
+				return;
+			}
 			
 			$username = $this->access_tes->get_username();
 			$user_row = $this->cbt_user_model->get_by_kolom_limit('user_name', $username, 1)->row();
@@ -380,6 +389,7 @@ class Tes_dashboard extends Tes_Controller {
 
 									// Mengambil data soal pada test_log 
 									$query_test_log = $this->cbt_tes_soal_model->get_by_testuser_select($tests_users_id, $subject_set->tset_topik_id, 'tessoal_id, soal_id, soal_tipe')->result();
+									$insert_jawaban_all = array();
 									foreach ($query_test_log as $test_log) {
 										// Jika tipe soal pilihan ganda
 										if($test_log->soal_tipe==1){
@@ -391,7 +401,6 @@ class Tes_dashboard extends Tes_Controller {
 												if($query_jawaban->num_rows()>0){
 													$query_jawaban = $query_jawaban->result();
 													$i_jawaban = 0;
-													$insert_jawaban = array();
 													foreach ($query_jawaban as $jawaban) {
 														// Menyimpan data soal
 														$data_jawaban['soaljawaban_jawaban_id'] = $jawaban->jawaban_id;
@@ -399,10 +408,8 @@ class Tes_dashboard extends Tes_Controller {
 														$data_jawaban['soaljawaban_selected'] = 0;
 														$data_jawaban['soaljawaban_tessoal_id'] = $test_log->tessoal_id;
 
-														$insert_jawaban[] = $data_jawaban;
+														$insert_jawaban_all[] = $data_jawaban;
 													}
-													//insert batch
-													$this->cbt_tes_soal_jawaban_model->save_batch($insert_jawaban);
 												}
 											}else{
 												// Mendapatkan jawaban yang tidak diacak
@@ -411,7 +418,6 @@ class Tes_dashboard extends Tes_Controller {
 												if($query_jawaban->num_rows()>0){
 													$query_jawaban = $query_jawaban->result();
 													$i_jawaban = 0;
-													$insert_jawaban = array();
 													foreach ($query_jawaban as $jawaban) {
 														// Menyimpan data soal
 														$data_jawaban['soaljawaban_jawaban_id'] = $jawaban->jawaban_id;
@@ -419,13 +425,14 @@ class Tes_dashboard extends Tes_Controller {
 														$data_jawaban['soaljawaban_selected'] = 0;
 														$data_jawaban['soaljawaban_tessoal_id'] = $test_log->tessoal_id;
 
-														$insert_jawaban[] = $data_jawaban;
+														$insert_jawaban_all[] = $data_jawaban;
 													}
-													//insert batch
-													$this->cbt_tes_soal_jawaban_model->save_batch($insert_jawaban);
 												}
 											}
 										}
+									}
+									if(!empty($insert_jawaban_all)){
+										$this->cbt_tes_soal_jawaban_model->save_batch($insert_jawaban_all);
 									}
 								}
 							}

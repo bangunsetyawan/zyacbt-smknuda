@@ -605,13 +605,13 @@ class Tes_kerjakan extends Tes_Controller {
                         }
                     }else if($query_soal->soal_tipe==2){
                         $val_text = !empty($query_soal->tessoal_jawaban_text) ? htmlspecialchars($query_soal->tessoal_jawaban_text, ENT_QUOTES, 'UTF-8') : '';
-                        $soal = $soal.'<textarea class="form-control cbt-essay-input" id="soal-jawaban" name="soal-jawaban" placeholder="Ketik jawaban uraian Anda di sini...">'.$val_text.'</textarea>
+                        $soal = $soal.'<textarea class="form-control cbt-essay-input" id="soal-jawaban" name="soal-jawaban" placeholder="Ketik jawaban uraian Anda di sini (Tempel / Paste dinonaktifkan)..." onpaste="return false;" oncopy="return false;" oncut="return false;" ondrop="return false;" ondragover="return false;" oncontextmenu="return false;" autocomplete="off">'.$val_text.'</textarea>
                             <button type="button" onclick="jawab()" class="btn btn-success btn-block cbt-btn-save-essay"><i class="fa fa-save"></i> SIMPAN JAWABAN URAIAN</button>
                             ';
                     }else if($query_soal->soal_tipe==3){
                         $val_text = !empty($query_soal->tessoal_jawaban_text) ? htmlspecialchars($query_soal->tessoal_jawaban_text, ENT_QUOTES, 'UTF-8') : '';
                         $soal = $soal.'
-                            <input type="text" class="form-control cbt-short-input" id="soal-jawaban" name="soal-jawaban" value="'.$val_text.'" placeholder="Ketik jawaban singkat Anda..." autocomplete="off" />
+                            <input type="text" class="form-control cbt-short-input" id="soal-jawaban" name="soal-jawaban" value="'.$val_text.'" placeholder="Ketik jawaban singkat Anda..." onpaste="return false;" oncopy="return false;" oncut="return false;" ondrop="return false;" ondragover="return false;" oncontextmenu="return false;" autocomplete="off" />
                             <button type="button" onclick="jawab()" class="btn btn-success btn-block cbt-btn-save-essay"><i class="fa fa-save"></i> SIMPAN JAWABAN</button>
                             ';
                     }

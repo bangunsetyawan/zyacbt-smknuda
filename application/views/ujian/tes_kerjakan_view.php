@@ -494,10 +494,39 @@
 		font-weight: 700;
 		border-radius: 10px !important;
 	}
+
+	/* Proteksi Anti-Blok, Anti-Copy, Anti-Drag & Anti-Long-Press pada Soal & Jawaban */
+	.cbt-exam-wrap,
+	.cbt-exam-wrap *,
+	#isi-tes-soal,
+	.cbt-question-stem,
+	.cbt-options-list,
+	.cbt-opt-card,
+	.cbt-opt-text {
+		-webkit-user-select: none !important;
+		-moz-user-select: none !important;
+		-ms-user-select: none !important;
+		user-select: none !important;
+		-webkit-touch-callout: none !important;
+		-webkit-user-drag: none !important;
+	}
+	.cbt-exam-wrap img {
+		pointer-events: none !important;
+		-webkit-user-drag: none !important;
+		-webkit-touch-callout: none !important;
+	}
+	textarea.cbt-essay-input,
+	input.cbt-short-input {
+		-webkit-user-select: text !important;
+		-moz-user-select: text !important;
+		-ms-user-select: text !important;
+		user-select: text !important;
+		-webkit-touch-callout: none !important;
+	}
 </style>
 
 <div class="container">
-	<div class="cbt-exam-wrap">
+	<div class="cbt-exam-wrap" oncopy="return false;" oncut="return false;" oncontextmenu="return false;" ondragstart="return false;">
 		<!-- Topbar Nama Tes + Zoom Ukuran Teks (%) -->
 		<div class="cbt-exam-topbar">
 			<h1 class="cbt-exam-name">
@@ -752,7 +781,83 @@
     }
 
     var essayDirty = false;
-    $(document).on('input', 'textarea.cbt-essay-input, input.cbt-short-input', function(){
+
+    // Blokir total Copy, Cut, Klik Kanan (Context Menu), Select, dan Drag di halaman ujian
+    $(document).on('copy cut contextmenu dragstart', function(e){
+        e.preventDefault();
+        return false;
+    });
+
+    $(document).on('selectstart', function(e){
+        var tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+        if(tag !== 'textarea' && tag !== 'input'){
+            e.preventDefault();
+            return false;
+        }
+    });
+
+    // Blokir shortcut keyboard Copy/Cut/Paste/Select-All/View-Source/Print/Save
+    $(document).on('keydown', function(e){
+        if(e.ctrlKey || e.metaKey){
+            var key = (e.key || '').toLowerCase();
+            var code = e.which || e.keyCode;
+            // C(67), V(86), X(88), A(65), U(85), S(83), P(80)
+            if(key === 'c' || key === 'v' || key === 'x' || key === 'a' || key === 'u' || key === 's' || key === 'p' ||
+               code === 67 || code === 86 || code === 88 || code === 65 || code === 85 || code === 83 || code === 80){
+                e.preventDefault();
+                if(key === 'v' || code === 86){
+                    notify_error('Tempel (Paste) dinonaktifkan! Ketik jawaban Anda sendiri.');
+                }
+                return false;
+            }
+        }
+    });
+
+    function initEssaySafeVal(){
+        $('#isi-tes-soal').find('textarea.cbt-essay-input, input.cbt-short-input').each(function(){
+            $(this).data('lastSafeVal', $(this).val() || '');
+        });
+    }
+
+    // Blokir Paste & Drop pada input Esai / Jawaban Singkat (termasuk Clipboard Keyboard HP)
+    $(document).on('focus keydown touchstart mousedown', 'textarea.cbt-essay-input, input.cbt-short-input', function(){
+        if(typeof $(this).data('lastSafeVal') !== 'string'){
+            $(this).data('lastSafeVal', $(this).val() || '');
+        }
+    });
+
+    $(document).on('paste drop', 'textarea.cbt-essay-input, input.cbt-short-input', function(e){
+        e.preventDefault();
+        notify_error('Tempel (Paste) dinonaktifkan! Ketik jawaban Anda sendiri.');
+        return false;
+    });
+
+    $(document).on('beforeinput', 'textarea.cbt-essay-input, input.cbt-short-input', function(e){
+        var oe = e.originalEvent;
+        if(oe && (oe.inputType === 'insertFromPaste' || oe.inputType === 'insertFromDrop' || oe.inputType === 'insertFromPasteAsQuotation')){
+            e.preventDefault();
+            notify_error('Tempel (Paste) dinonaktifkan! Ketik jawaban Anda sendiri.');
+            return false;
+        }
+    });
+
+    $(document).on('input', 'textarea.cbt-essay-input, input.cbt-short-input', function(e){
+        var $el = $(this);
+        var curVal = $el.val() || '';
+        var prevVal = $el.data('lastSafeVal');
+        if(typeof prevVal !== 'string'){
+            prevVal = '';
+        }
+        var oe = e.originalEvent;
+        var isPasteType = (oe && (oe.inputType === 'insertFromPaste' || oe.inputType === 'insertFromDrop' || oe.inputType === 'insertFromPasteAsQuotation'));
+
+        // Jika terdeteksi paste dari clipboard bar keyboard HP (atau lonjakan > 30 karakter sekaligus)
+        if(isPasteType || (curVal.length - prevVal.length > 30)){
+            $el.val(prevVal);
+            notify_error('Tempel (Paste) dari Clipboard tidak diizinkan! Ketik manual jawaban Anda.');
+            return false;
+        }
+        $el.data('lastSafeVal', curVal);
         essayDirty = true;
     });
 
@@ -803,6 +908,7 @@
                         $('#tes-soal-ragu').val(data.tes_ragu);
                         $('#judul-soal').html(data.tes_soal_nomor);
                         essayDirty = false;
+                        initEssaySafeVal();
                         highlightCurrentSoal(data.tes_soal_nomor);
 
                         if(data.tes_ragu==0){
@@ -925,6 +1031,7 @@
         var elTimerBox = document.getElementById("timer-box");
 
         highlightCurrentSoal($('#tes-soal-nomor').val());
+        initEssaySafeVal();
         if(elSisa) elSisa.textContent = formatCountdown(sisa_detik);
 
         setInterval(function() {
