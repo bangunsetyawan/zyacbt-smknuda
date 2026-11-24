@@ -16,6 +16,9 @@ class Tool_backup extends Member_Controller {
 		$this->load->model('cbt_user_model');
 
 		parent::cek_akses($this->kode_menu);
+		if(strtolower((string)$this->access->get_level()) !== 'admin'){
+			show_error('Akses menu Backup Data hanya diizinkan untuk Administrator.', 403);
+		}
 	}
 	
     public function index(){

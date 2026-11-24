@@ -86,5 +86,6 @@ class Access_tes{
 		$this->CI->session->unset_userdata('cbt_tes_group_id');
 		$this->CI->session->unset_userdata('cbt_tes_group');
 		$this->CI->session->unset_userdata('cbt_tes_token');
+		$this->CI->session->sess_regenerate(TRUE);
 	}
 }

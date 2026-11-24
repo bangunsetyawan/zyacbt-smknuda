@@ -114,7 +114,11 @@
 		$( document ).ready(function() {
 			$('#waktu').daterangepicker({timePicker: true, timePickerIncrement: 10, format: 'YYYY-MM-DD H:mm'});
 			
-            $('#table-soal').DataTable({
+			$('#btn-kartu').click(function(){
+				refresh_table();
+			});
+
+            $('#table-peserta').DataTable({
                   "paging": true,
                   "iDisplayLength":10,
                   "bProcessing": false,
@@ -123,12 +127,16 @@
                   "aoColumns": [
                         {"bSearchable": false, "bSortable": false, "sWidth":"20px"},
                         {"bSearchable": false, "bSortable": false},
-                        {"bSearchable": false, "bSortable": false, "sWidth":"50px"},
-                        {"bSearchable": false, "bSortable": false, "sWidth":"50px"}],
+                        {"bSearchable": false, "bSortable": false},
+                        {"bSearchable": false, "bSortable": false},
+                        {"bSearchable": false, "bSortable": false, "sWidth":"80px"}],
                   "sAjaxSource": "<?php echo site_url().'/'.$url; ?>/get_datatable/",
                   "autoWidth": false,
                   "fnServerParams": function ( aoData ) {
-                    aoData.push( { "name": "topik", "value": $('#topik').val()} );
+                    aoData.push( { "name": "group", "value": $('#group').val()} );
+                    aoData.push( { "name": "keterangan", "value": $('#keterangan').val()} );
+                    aoData.push( { "name": "waktu", "value": $('#waktu').val()} );
+                    aoData.push( { "name": "status", "value": $('#status').val()} );
                   }
             });
 		});

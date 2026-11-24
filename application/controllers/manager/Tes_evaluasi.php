@@ -228,19 +228,47 @@ class Tes_evaluasi extends Member_Controller {
     /**
      * Simpan nilai 1 jawaban esai (Inline / Modal)
      */
+    /**
+     * Hitung batas nilai esai (min & max) dari server berdasarkan tessoal_id (tidak mempercayai input klien)
+     */
+    private function _get_bounds_by_tessoal($tessoal_id, &$bounds_cache = array(), &$tesuser_id_out = 0){
+        $tesuser_id_out = 0;
+        $row = $this->db->select('ts.tessoal_tesuser_id, t.tes_id, t.tes_score_right, t.tes_max_score')
+                        ->from('cbt_tes_soal ts')
+                        ->join('cbt_tes_user tu', 'tu.tesuser_id = ts.tessoal_tesuser_id')
+                        ->join('cbt_tes t', 't.tes_id = tu.tesuser_tes_id')
+                        ->where('ts.tessoal_id', (int)$tessoal_id)
+                        ->limit(1)
+                        ->get()->row();
+        if(!$row){
+            return null;
+        }
+        $tesuser_id_out = (int)$row->tessoal_tesuser_id;
+        $tid = (int)$row->tes_id;
+        if(!isset($bounds_cache[$tid])){
+            $bounds_cache[$tid] = $this->_get_essay_score_bounds($tid, $row->tes_score_right, $row->tes_max_score);
+        }
+        return $bounds_cache[$tid];
+    }
+
     function simpan_nilai(){
         $this->load->library('form_validation');
         
         $this->form_validation->set_rules('evaluasi-testlog-id', 'Soal','required|integer');
-        $this->form_validation->set_rules('evaluasi-nilai-min', 'Nilai Minimal','required|numeric');
-        $this->form_validation->set_rules('evaluasi-nilai-max', 'Nilai Maximal','required|numeric');
         $this->form_validation->set_rules('evaluasi-nilai', 'Nilai','required|numeric');
         
         if($this->form_validation->run() == TRUE){
             $nilai = round((float)$this->input->post('evaluasi-nilai', TRUE), 2);
-            $nilai_min = round((float)$this->input->post('evaluasi-nilai-min', TRUE), 2);
-            $nilai_max = round((float)$this->input->post('evaluasi-nilai-max', TRUE), 2);
             $tessoal_id = (int)$this->input->post('evaluasi-testlog-id', TRUE);
+            $bounds_cache = array();
+            $tu_id = 0;
+            $bounds = $this->_get_bounds_by_tessoal($tessoal_id, $bounds_cache, $tu_id);
+            if(!$bounds){
+                echo json_encode(array('status' => 0, 'pesan' => 'Data jawaban soal tidak ditemukan.'));
+                return;
+            }
+            $nilai_min = (float)$bounds['min'];
+            $nilai_max = (float)$bounds['max'];
 
             if($nilai >= $nilai_min && $nilai <= $nilai_max){
                 $korektor = $this->access->get_username();
@@ -251,9 +279,7 @@ class Tes_evaluasi extends Member_Controller {
 
                 // Hitung total nilai terbaru siswa pada tes ini
                 $total_nilai_siswa = null;
-                $q_ts = $this->cbt_tes_soal_model->get_by_kolom_limit('tessoal_id', $tessoal_id, 1);
-                if($q_ts->num_rows() > 0){
-                    $tu_id = (int)$q_ts->row()->tessoal_tesuser_id;
+                if($tu_id > 0){
                     $q_tot = $this->cbt_tes_soal_model->get_nilai($tu_id);
                     if($q_tot->num_rows() > 0){
                         $total_nilai_siswa = round((float)$q_tot->row()->hasil, 2);
@@ -292,17 +318,23 @@ class Tes_evaluasi extends Member_Controller {
         $korektor = $this->access->get_username();
         $comment = 'Sudah di koreksi '.$korektor;
         $saved = 0;
+        $bounds_cache = array();
 
         $this->db->trans_begin();
         foreach($items as $it){
             $tessoal_id = isset($it['tessoal_id']) ? (int)$it['tessoal_id'] : 0;
             $nilai_raw  = isset($it['nilai']) ? trim((string)$it['nilai']) : '';
-            $min_val    = isset($it['min']) ? (float)$it['min'] : 0.0;
-            $max_val    = isset($it['max']) ? (float)$it['max'] : 100.0;
 
             if($tessoal_id <= 0 || $nilai_raw === '' || !is_numeric($nilai_raw)){
                 continue;
             }
+            $tu_id = 0;
+            $bounds = $this->_get_bounds_by_tessoal($tessoal_id, $bounds_cache, $tu_id);
+            if(!$bounds){
+                continue;
+            }
+            $min_val = (float)$bounds['min'];
+            $max_val = (float)$bounds['max'];
             $nilai = round((float)$nilai_raw, 2);
             if($nilai < $min_val || $nilai > $max_val){
                 $this->db->trans_rollback();

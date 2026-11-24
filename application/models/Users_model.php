@@ -41,14 +41,19 @@ class Users_model extends CI_Model{
      */ 
     function change_password($username, $password){
         $this->db->where('username', $username);
-        $this->db->update('user', array('password' => sha1($password)));
+        $this->db->update('user', array('password' => password_hash((string)$password, PASSWORD_BCRYPT)));
 	}
     
     function get_user_count($username, $password){
-        $this->db->where('username', $username)
-                 ->where('password', sha1($password))
-                 ->from('user');
-        return $this->db->count_all_results();	
+        $user = $this->get_login_info($username);
+        if(!$user){
+            return 0;
+        }
+        $stored = (string)$user->password;
+        if(strpos($stored, '$2y$') === 0 || strpos($stored, '$2a$') === 0 || strpos($stored, '$argon2') === 0){
+            return password_verify((string)$password, $stored) ? 1 : 0;
+        }
+        return (sha1((string)$password) === $stored) ? 1 : 0;
 	}
     
     function get_user_count_by_level($level){
@@ -62,12 +67,16 @@ class Users_model extends CI_Model{
 	 * mendapatkan hak akses suatu menu
 	 */
 	function cek_akses($kode_menu, $level){
-		$sql='SELECT COUNT(*) AS hasil FROM user_akses WHERE user_akses.kode_menu="'.$kode_menu.'" AND user_akses.level="'.$level.'"';
-		$hasil=$this->db->query($sql)->row()->hasil;
+		$sql='SELECT COUNT(*) AS hasil FROM user_akses WHERE user_akses.kode_menu=? AND user_akses.level=?';
+		$hasil=$this->db->query($sql, array((string)$kode_menu, (string)$level))->row()->hasil;
 		if($hasil == 0 && $kode_menu === 'modul-import-word'){
 			// Fallback: level yang memiliki akses modul-import (spreadsheet lama) otomatis diizinkan akses modul-import-word
-			$sql_fb = 'SELECT COUNT(*) AS hasil FROM user_akses WHERE user_akses.kode_menu="modul-import" AND user_akses.level="'.$level.'"';
-			$hasil = $this->db->query($sql_fb)->row()->hasil;
+			$sql_fb = 'SELECT COUNT(*) AS hasil FROM user_akses WHERE user_akses.kode_menu="modul-import" AND user_akses.level=?';
+			$hasil = $this->db->query($sql_fb, array((string)$level))->row()->hasil;
+		}
+		if($hasil == 0 && $kode_menu === 'peserta-online'){
+			$sql_fb = 'SELECT COUNT(*) AS hasil FROM user_akses WHERE user_akses.kode_menu="peserta-daftar" AND user_akses.level=?';
+			$hasil = $this->db->query($sql_fb, array((string)$level))->row()->hasil;
 		}
 
 		return $hasil;
@@ -78,41 +87,42 @@ class Users_model extends CI_Model{
 	 */
 	function cek_akses_crud($kode_menu, $level, $tipe){
         if($tipe==0){
-            $sql='SELECT COUNT(*) AS hasil FROM user_akses WHERE user_akses.kode_menu="'.$kode_menu.'" AND user_akses.level="'.$level.'" AND user_akses.add=1';
+            $sql='SELECT COUNT(*) AS hasil FROM user_akses WHERE user_akses.kode_menu=? AND user_akses.level=? AND user_akses.add=1';
         }else{
-            $sql='SELECT COUNT(*) AS hasil FROM user_akses WHERE user_akses.kode_menu="'.$kode_menu.'" AND user_akses.level="'.$level.'" AND user_akses.edit=1';
+            $sql='SELECT COUNT(*) AS hasil FROM user_akses WHERE user_akses.kode_menu=? AND user_akses.level=? AND user_akses.edit=1';
         }
-		$hasil=$this->db->query($sql)->row()->hasil;
+		$hasil=$this->db->query($sql, array((string)$kode_menu, (string)$level))->row()->hasil;
 		if($hasil == 0 && $kode_menu === 'modul-import-word'){
 			$col = ($tipe == 0) ? 'add' : 'edit';
-			$sql_fb = 'SELECT COUNT(*) AS hasil FROM user_akses WHERE user_akses.kode_menu="modul-import" AND user_akses.level="'.$level.'" AND user_akses.'.$col.'=1';
-			$hasil = $this->db->query($sql_fb)->row()->hasil;
+			$sql_fb = 'SELECT COUNT(*) AS hasil FROM user_akses WHERE user_akses.kode_menu="modul-import" AND user_akses.level=? AND user_akses.'.$col.'=1';
+			$hasil = $this->db->query($sql_fb, array((string)$level))->row()->hasil;
 		}
 
 		return $hasil;
 	}
     
     function get_all_user($start, $rows, $search){
-        $this->db->where('(username LIKE "%'.$search.'%" OR nama LIKE "%'.$search.'%")')
+        $s_like = $this->db->escape_like_str((string)$search);
+        $this->db->where('(username LIKE "%'.$s_like.'%" OR nama LIKE "%'.$s_like.'%")')
                  ->where('username !=','admin')
                  ->from('user')
-                 ->limit($rows, $start);    
+                 ->limit((int)$rows, (int)$start);    
         
         return $this->db->get();
     }
     
     function get_all_user_count($search){
+        $s_like = $this->db->escape_like_str((string)$search);
         $this->db->select('COUNT(*) AS hasil')
-                 ->like('user.username', $search)
-                 ->or_like('user.nama', $search)
+                 ->where('(username LIKE "%'.$s_like.'%" OR nama LIKE "%'.$s_like.'%")')
                  ->where('user.username !=','admin')
                  ->from('user');
         return $this->db->get();
     }
     
     function get_parent_menu($child_menu){
-        $sql = 'SELECT `user_menu`.`parent` FROM user_menu WHERE `user_menu`.`kode_menu`="'.$child_menu.'"';
-        $query = $this->db->query($sql);
+        $sql = 'SELECT `user_menu`.`parent` FROM user_menu WHERE `user_menu`.`kode_menu`=?';
+        $query = $this->db->query($sql, array((string)$child_menu));
         if($query->num_rows()>0){
             $hasil = $query->row()->parent;
         }else{
@@ -123,8 +133,8 @@ class Users_model extends CI_Model{
     }
     
     function get_menu_detail($kode_menu){
-        $sql = 'SELECT `user_menu`.* FROM user_menu WHERE `user_menu`.`kode_menu`="'.$kode_menu.'" LIMIT 1';
-        return $this->db->query($sql);
+        $sql = 'SELECT `user_menu`.* FROM user_menu WHERE `user_menu`.`kode_menu`=? LIMIT 1';
+        return $this->db->query($sql, array((string)$kode_menu));
     }
     
     /**
@@ -132,7 +142,7 @@ class Users_model extends CI_Model{
      */ 
     function get_menu($kode_menu, $level){
         $this->db->select('user_menu.parent')
-                 ->where('(user_akses.level="'.$level.'")')
+                 ->where('user_akses.level', (string)$level)
 				 ->join('user_menu', 'user_akses.kode_menu = user_menu.kode_menu')
                  ->from('user_akses')
 				 ->group_by('user_menu.parent');
@@ -142,6 +152,9 @@ class Users_model extends CI_Model{
 		$data_menu = array();
 		foreach($result as $temp){
 			$data_menu[] = $temp->parent;
+		}
+		if(empty($data_menu)){
+			return '';
 		}
 		
 		$this->db->where_in('kode_menu', $data_menu)
@@ -161,9 +174,9 @@ class Users_model extends CI_Model{
     			}
                 
                 $sql_child = 'SELECT user_menu.* FROM `user_akses` INNER JOIN `user_level` ON (`user_akses`.`level` = `user_level`.`level`) 
-                    INNER JOIN `user_menu` ON (`user_akses`.`kode_menu` = `user_menu`.`kode_menu`) WHERE user_akses.`level`="'.$level.'" 
-                    AND user_menu.`tipe`=1 AND user_menu.parent="'.$temp->kode_menu.'" ORDER BY user_menu.`urutan` ASC';
-                $result_child = $this->db->query($sql_child);
+                    INNER JOIN `user_menu` ON (`user_akses`.`kode_menu` = `user_menu`.`kode_menu`) WHERE user_akses.`level`=? 
+                    AND user_menu.`tipe`=1 AND user_menu.parent=? ORDER BY user_menu.`urutan` ASC';
+                $result_child = $this->db->query($sql_child, array((string)$level, (string)$temp->kode_menu));
                 
                 $menu_child = '';
                 $menu_child_count = 0;

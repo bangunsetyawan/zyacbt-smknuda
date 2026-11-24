@@ -204,14 +204,14 @@
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown">
                       <img src="<?php echo base_url(); ?>public/images/avatar.png" class="user-image" alt="User Image" />
                       <!-- hidden-xs hides the username on small devices so only the image appears. -->
-                      <span class="hidden-xs"><?php if(!empty($nama)){ echo $nama; }else{ echo 'User Tes'; } ?></span>
+                      <span class="hidden-xs"><?php if(!empty($nama)){ echo htmlspecialchars((string)$nama, ENT_QUOTES, 'UTF-8'); }else{ echo 'User Tes'; } ?></span>
                     </a>
                     <ul class="dropdown-menu">
                       <!-- The user image in the menu -->
                       <li class="user-header" style="max-height: 70px;">
                         <p>
-                          <?php if(!empty($nama)){ echo $nama; }else{ echo 'User Tes'; } ?>
-                          <?php if(!empty($group)){ echo ' | '.$group; } ?>
+                          <?php if(!empty($nama)){ echo htmlspecialchars((string)$nama, ENT_QUOTES, 'UTF-8'); }else{ echo 'User Tes'; } ?>
+                          <?php if(!empty($group)){ echo ' | '.htmlspecialchars((string)$group, ENT_QUOTES, 'UTF-8'); } ?>
                         </p>
                       </li>
                       <!-- Menu Footer-->
@@ -240,7 +240,7 @@
       </div><!-- /.content-wrapper -->
       <footer class="main-footer no-print">
         <div class="pull-right hidden-xs">
-          <?php if(!empty($nama)){ echo $nama; } ?> | <strong> <a href="<?php echo site_url(); ?>/welcome/logout" >Log out</a></strong>
+          <?php if(!empty($nama)){ echo htmlspecialchars((string)$nama, ENT_QUOTES, 'UTF-8'); } ?> | <strong> <a href="<?php echo site_url(); ?>/welcome/logout" >Log out</a></strong>
         </div>
         <div class="container">
           <strong>&copy; 2026 achmadlutfi.wordpress.com</strong>

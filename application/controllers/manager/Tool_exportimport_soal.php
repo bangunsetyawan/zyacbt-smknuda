@@ -192,62 +192,78 @@ class Tool_exportimport_soal extends Member_Controller {
 	                $zip = new ZipArchive;
  
 			        if ($zip->open($config['upload_path'].$upload_data['file_name']) === TRUE)			        {
-			            $zip->extractTo($config['upload_path'].'import/');
-			            $zip->close();
-
-			            $error_sql = 0;
-			            $count_import = 0;
-			            // Memulai transaction mysql
-						$this->db->trans_start();
-
-			            // Hapus Semua Data Modul jika ada
-			            $this->cbt_modul_model->empty_table();
-			            
-			            // Import SQL
-			            if (file_exists($config['upload_path'].'import/zyacbt-soal.sql')) {
-			            	$isi_file = file_get_contents($config['upload_path'].'import/zyacbt-soal.sql'); 
-	          				//$string_query = rtrim( $isi_file, "\n;" );
-	          				//$string_query = str_replace('_ci;', ');', $isi_file);
-	          				$array_query = explode($delimiter, $isi_file);
-	          				foreach($array_query as $query){
-	                    		if(preg_match('/INSERT INTO/', $query)){
-	                    			//echo $query; 
-	                    			//echo '<hr />';
-	                    			$this->db->query($query);
-	                    			$count_import++;
-	                    		}
-	                    	}
+			            $zip_safe = true;
+			            $allowed_media_ext = array('jpg', 'jpeg', 'png', 'gif', 'webp', 'mp3', 'ogg', 'wav');
+			            for ($zi = 0; $zi < $zip->numFiles; $zi++) {
+			                $ename = (string)$zip->getNameIndex($zi);
+			                if ($ename === '' || strpos($ename, '..') !== false || strpos($ename, '\\') !== false || substr($ename, 0, 1) === '/') {
+			                    $zip_safe = false;
+			                    break;
+			                }
+			                if (substr($ename, -1) === '/') {
+			                    continue;
+			                }
+			                if ($ename === 'zyacbt-soal.sql') {
+			                    continue;
+			                }
+			                $ext = strtolower(pathinfo($ename, PATHINFO_EXTENSION));
+			                if (strpos($ename, 'uploads/') !== 0 || !in_array($ext, $allowed_media_ext, true)) {
+			                    $zip_safe = false;
+			                    break;
+			                }
 			            }
-			            
-			            // Menutup transaction mysql
-						$this->db->trans_complete(); 
-						if ($this->db->trans_status() === FALSE){
-        					// generate an error... or use the log_message() function to log your error
-        					$error_sql = 1;
-        				}
 
-        				// Jika tidak ada data yang di import, maka tambahkan Modul Default karena diawal tadi dihapus
-        				//if($count_import==0){
-        				//	$data_modul['modul_nama'] = 'Default';
-	            		//	$data_modul['modul_aktif'] = 1;
-	            		//	$this->cbt_modul_model->save($data_modul);
-        				//}
+			            if (!$zip_safe) {
+			                $zip->close();
+			                @unlink($config['upload_path'].$upload_data['file_name']);
+			                $data['error'] = 'Arsip ZIP ditolak karena mengandung file atau path yang tidak diizinkan.';
+			            } else {
+			                $zip->extractTo($config['upload_path'].'import/');
+			                $zip->close();
 
-			            // Pindahkan folder gambar dan audio ke uploads jika proses import SQL berhasil
-			            if($error_sql!=1 and $count_import>0){
-			            	// Cek apakah folder import/uploads ada
-			            	if(is_dir($config['upload_path'].'import/uploads/')){
-			            		$this->recurse_copy($config['upload_path'].'import/uploads/', './uploads/');
-			            	}
-							
-							$data['filename'] = $data['filename'].'<br />Data Soal Berhasil Di Import. Silahkan cek Soal dan Jawaban.';
-			            }else{
-			            	if($error_sql==1){
-			            		$data['error'] = 'Terjadi Kesalahan pada File SQL SOAL.';
-			            	}else{
-			            		$data['error'] = 'Tidak ada Data Soal yang di Import. Silahkan cek kembali.';
-			            	}
+			                $error_sql = 0;
+			                $count_import = 0;
+			                // Memulai transaction mysql
+							$this->db->trans_start();
+
+			                // Hapus Semua Data Modul jika ada
+			                $this->cbt_modul_model->empty_table();
+			                
+			                // Import SQL (hanya izinkan INSERT INTO ke 4 tabel soal resmi)
+			                if (file_exists($config['upload_path'].'import/zyacbt-soal.sql')) {
+			                	$isi_file = file_get_contents($config['upload_path'].'import/zyacbt-soal.sql'); 
+		          				$array_query = explode($delimiter, $isi_file);
+		          				foreach($array_query as $query){
+		          					$trimmed_q = trim($query);
+		                    		if(preg_match('/^INSERT\s+INTO\s+`?(cbt_modul|cbt_topik|cbt_soal|cbt_jawaban)`?\b/i', $trimmed_q)){
+		                    			$this->db->query($trimmed_q);
+		                    			$count_import++;
+		                    		}
+		                    	}
+			                }
+			                
+			                // Menutup transaction mysql
+							$this->db->trans_complete(); 
+							if ($this->db->trans_status() === FALSE){
+	        					$error_sql = 1;
+	        				}
+
+			                // Pindahkan folder gambar dan audio ke uploads jika proses import SQL berhasil
+			                if($error_sql!=1 and $count_import>0){
+			                	if(is_dir($config['upload_path'].'import/uploads/')){
+			                		$this->recurse_copy($config['upload_path'].'import/uploads/', './uploads/');
+			                	}
+								
+								$data['filename'] = $data['filename'].'<br />Data Soal Berhasil Di Import. Silahkan cek Soal dan Jawaban.';
+			                }else{
+			                	if($error_sql==1){
+			                		$data['error'] = 'Terjadi Kesalahan pada File SQL SOAL.';
+			                	}else{
+			                		$data['error'] = 'Tidak ada Data Soal yang di Import. Silahkan cek kembali.';
+			                	}
+			                }
 			            }
+			            @unlink($config['upload_path'].$upload_data['file_name']);
 			        }else{
 			        	$data['error'] = 'Data Soal Rusak. Silahkan cek kembali Data yang akan di import.';
 			        }
@@ -265,6 +281,7 @@ class Tool_exportimport_soal extends Member_Controller {
     }
 
     function recurse_copy($src,$dst) {
+		$allowed_media_ext = array('jpg', 'jpeg', 'png', 'gif', 'webp', 'mp3', 'ogg', 'wav');
 		$dir = opendir($src);
 		if(!is_dir($dst)){
 			mkdir($dst);
@@ -274,7 +291,10 @@ class Tool_exportimport_soal extends Member_Controller {
 				if ( is_dir($src . '/' . $file) ) {
 					$this->recurse_copy($src . '/' . $file,$dst . '/' . $file);
 				}else {
-					copy($src . '/' . $file, $dst . '/' . $file);
+					$ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+					if (in_array($ext, $allowed_media_ext, true)) {
+						copy($src . '/' . $file, $dst . '/' . $file);
+					}
 				}
 			}
 		}

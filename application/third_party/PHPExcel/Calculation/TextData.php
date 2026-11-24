@@ -209,14 +209,14 @@ class PHPExcel_Calculation_TextData {
 		$decimals = floor($decimals);
 
 		if ($decimals > 0) {
-			return money_format('%.'.$decimals.'n',$value);
+			$neg = ($value < 0);
+			return ($neg ? '-$' : '$') . number_format(abs($value), (int)$decimals, '.', ',');
 		} else {
 			$round = pow(10,abs($decimals));
 			if ($value < 0) { $round = 0-$round; }
 			$value = PHPExcel_Calculation_MathTrig::MROUND($value,$round);
-			//	The implementation of money_format used if the standard PHP function is not available can't handle decimal places of 0,
-			//		so we display to 1 dp and chop off that character and the decimal separator using substr
-			return substr(money_format('%.1n',$value),0,-2);
+			$neg = ($value < 0);
+			return ($neg ? '-$' : '$') . number_format(abs($value), 0, '.', ',');
 		}
 	}	//	function DOLLAR()
 

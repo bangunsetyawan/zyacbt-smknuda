@@ -25,8 +25,8 @@ class Cbt_tes_user_model extends CI_Model{
     }
 
     function update_menit($tesuser_id, $waktu){
-        $sql = 'UPDATE cbt_tes_user SET tesuser_creation_time=TIMESTAMPADD(MINUTE, '.$waktu.', tesuser_creation_time) WHERE tesuser_id="'.$tesuser_id.'"';
-        $this->db->query($sql);
+        $sql = 'UPDATE cbt_tes_user SET tesuser_creation_time=TIMESTAMPADD(MINUTE, ?, tesuser_creation_time) WHERE tesuser_id=?';
+        $this->db->query($sql, array((int)$waktu, (int)$tesuser_id));
     }
     
     function count_by_kolom($kolom, $isi){
@@ -46,7 +46,9 @@ class Cbt_tes_user_model extends CI_Model{
     function count_by_status_waktu($tesuser_id){
 		$now = date('Y-m-d H:i:s');
         $this->db->select('COUNT(tesuser_id) AS hasil')
-                 ->where('(tesuser_id="'.$tesuser_id.'" AND tesuser_status="1" AND TIMESTAMPADD(MINUTE, tes_duration_time, tesuser_creation_time)>"'.$now.'")')
+                 ->where('tesuser_id', (int)$tesuser_id)
+                 ->where('tesuser_status', 1)
+                 ->where('TIMESTAMPADD(MINUTE, tes_duration_time, tesuser_creation_time)>'.$this->db->escape($now), null, false)
                  ->from($this->table)
                  ->join('cbt_tes', 'cbt_tes_user.tesuser_tes_id = cbt_tes.tes_id');
         return $this->db->get();
@@ -62,21 +64,26 @@ class Cbt_tes_user_model extends CI_Model{
      */
     function count_by_status_waktuuser($tesuser_id, $waktuuser){
         $this->db->select('COUNT(tesuser_id) AS hasil')
-                 ->where('(tesuser_id="'.$tesuser_id.'" AND tesuser_status="1" AND TIMESTAMPADD(MINUTE, tes_duration_time, tesuser_creation_time)>"'.$waktuuser.'")')
+                 ->where('tesuser_id', (int)$tesuser_id)
+                 ->where('tesuser_status', 1)
+                 ->where('TIMESTAMPADD(MINUTE, tes_duration_time, tesuser_creation_time)>'.$this->db->escape((string)$waktuuser), null, false)
                  ->from($this->table)
                  ->join('cbt_tes', 'cbt_tes_user.tesuser_tes_id = cbt_tes.tes_id');
         return $this->db->get();
     }
 
     function get_by_user_status($user_id){
-        $this->db->where('tesuser_user_id="'.$user_id.'" AND tesuser_status!=4')
+        $this->db->where('tesuser_user_id', (int)$user_id)
+                 ->where('tesuser_status !=', 4)
                  ->from($this->table)
                  ->join('cbt_tes', 'cbt_tes_user.tesuser_tes_id = cbt_tes.tes_id');
         return $this->db->get();
     }
 
     function get_by_user_tes_limit($user_id, $tes_id){
-        $this->db->where('tesuser_user_id="'.$user_id.'" AND tesuser_tes_id="'.$tes_id.'" AND tesuser_status=1')
+        $this->db->where('tesuser_user_id', (int)$user_id)
+                 ->where('tesuser_tes_id', (int)$tes_id)
+                 ->where('tesuser_status', 1)
                  ->from($this->table)
                  ->join('cbt_tes', 'cbt_tes_user.tesuser_tes_id = cbt_tes.tes_id')
                  ->limit(1);
@@ -85,20 +92,24 @@ class Cbt_tes_user_model extends CI_Model{
 
     function count_by_user_tes($user_id, $tes_id){
         $this->db->select('COUNT(*) AS hasil')
-                 ->where('tesuser_user_id="'.$user_id.'" AND tesuser_tes_id="'.$tes_id.'"')
+                 ->where('tesuser_user_id', (int)$user_id)
+                 ->where('tesuser_tes_id', (int)$tes_id)
                  ->from($this->table);
         return $this->db->get();
     }
 
     function count_by_user_tes_selesai($user_id, $tes_id){
         $this->db->select('COUNT(*) AS hasil')
-                 ->where('tesuser_user_id="'.$user_id.'" AND tesuser_tes_id="'.$tes_id.'" AND tesuser_status=4')
+                 ->where('tesuser_user_id', (int)$user_id)
+                 ->where('tesuser_tes_id', (int)$tes_id)
+                 ->where('tesuser_status', 4)
                  ->from($this->table);
         return $this->db->get();
     }
 	
     function get_by_user_tes($user_id, $tes_id){
-        $this->db->where('tesuser_user_id="'.$user_id.'" AND tesuser_tes_id="'.$tes_id.'"')
+        $this->db->where('tesuser_user_id', (int)$user_id)
+                 ->where('tesuser_tes_id', (int)$tes_id)
                  ->from($this->table)
                  ->limit(1);
         return $this->db->get();
@@ -126,13 +137,15 @@ class Cbt_tes_user_model extends CI_Model{
     }
 
     function get_by_tes_group_urut_tanggal($tes_id, $grup_id, $urutkan, $tanggal, $keterangan){
-        $sql = 'tesuser_creation_time>="'.$tanggal[0].'" AND tesuser_creation_time<="'.$tanggal[1].'"';
+        $t0 = $this->db->escape((string)$tanggal[0]);
+        $t1 = $this->db->escape((string)$tanggal[1]);
+        $sql = 'tesuser_creation_time>='.$t0.' AND tesuser_creation_time<='.$t1;
 		
         if($tes_id!='semua'){
-            $sql = $sql.' AND tes_id="'.$tes_id.'"';
+            $sql = $sql.' AND tes_id='.(int)$tes_id;
         }
         if($grup_id!='semua'){
-            $sql = $sql.' AND user_grup_id="'.$grup_id.'"';
+            $sql = $sql.' AND user_grup_id='.(int)$grup_id;
         }
         $order = '';
         if($urutkan=='tertinggi'){
@@ -148,7 +161,7 @@ class Cbt_tes_user_model extends CI_Model{
         }
 		
 		if(!empty($keterangan)){
-			$sql = $sql.' AND user_detail LIKE "%'.$keterangan.'%"';
+			$sql = $sql.' AND user_detail LIKE "%'.$this->db->escape_like_str((string)$keterangan).'%"';
 		}
 
         $this->db->select('cbt_tes_user.*, cbt_tes.*, cbt_user.*, cbt_user_grup.grup_nama, SUM(`cbt_tes_soal`.`tessoal_nilai`) AS nilai ')
@@ -164,10 +177,9 @@ class Cbt_tes_user_model extends CI_Model{
     }
 	
 	function get_by_tes_group($tes_id, $grup_id){
-        $sql = 'tesuser_tes_id="'.$tes_id.'" AND user_grup_id="'.$grup_id.'"';
-
         $this->db->select('cbt_tes_user.*, cbt_tes.tes_nama, cbt_user.*, cbt_user_grup.grup_nama')
-                 ->where('( '.$sql.' )')
+                 ->where('tesuser_tes_id', (int)$tes_id)
+                 ->where('user_grup_id', (int)$grup_id)
                  ->from($this->table)
                  ->join('cbt_user', 'cbt_tes_user.tesuser_user_id = cbt_user.user_id')
                  ->join('cbt_user_grup', 'cbt_user.user_grup_id = cbt_user_grup.grup_id')
@@ -178,7 +190,8 @@ class Cbt_tes_user_model extends CI_Model{
 
     function get_nilai_by_tes_user($tes_id, $user_id){
         $this->db->select('SUM(`cbt_tes_soal`.`tessoal_nilai`) AS nilai')
-                 ->where('(tesuser_tes_id="'.$tes_id.'" AND tesuser_user_id="'.$user_id.'")')
+                 ->where('tesuser_tes_id', (int)$tes_id)
+                 ->where('tesuser_user_id', (int)$user_id)
                  ->from($this->table)
                  ->join('cbt_tes_soal', 'cbt_tes_soal.tessoal_tesuser_id = cbt_tes_user.tesuser_id');
         return $this->db->get();
@@ -189,13 +202,16 @@ class Cbt_tes_user_model extends CI_Model{
 	*
 	*/
 	function get_datatable($start, $rows, $tes_id, $grup_id, $urutkan, $tanggal, $keterangan, $search){
-        $sql = 'tesuser_creation_time>="'.$tanggal[0].'" AND tesuser_creation_time<="'.$tanggal[1].'" AND user_firstname LIKE "%'.$search.'%"';
+        $t0 = $this->db->escape((string)$tanggal[0]);
+        $t1 = $this->db->escape((string)$tanggal[1]);
+        $s_like = $this->db->escape_like_str((string)$search);
+        $sql = 'tesuser_creation_time>='.$t0.' AND tesuser_creation_time<='.$t1.' AND user_firstname LIKE "%'.$s_like.'%"';
 		
         if($tes_id!='semua'){
-            $sql = $sql.' AND tesuser_tes_id="'.$tes_id.'"';
+            $sql = $sql.' AND tesuser_tes_id='.(int)$tes_id;
         }
         if($grup_id!='semua'){
-            $sql = $sql.' AND user_grup_id="'.$grup_id.'"';
+            $sql = $sql.' AND user_grup_id='.(int)$grup_id;
         }
         $order = '';
         if($urutkan=='tertinggi'){
@@ -211,7 +227,7 @@ class Cbt_tes_user_model extends CI_Model{
         }
 		
 		if(!empty($keterangan)){
-			$sql = $sql.' AND user_detail LIKE "%'.$keterangan.'%"';
+			$sql = $sql.' AND user_detail LIKE "%'.$this->db->escape_like_str((string)$keterangan).'%"';
 		}
 
 		$this->db->select('cbt_tes_user.*,cbt_user_grup.grup_nama, cbt_tes.*, cbt_user.*, SUM(`cbt_tes_soal`.`tessoal_nilai`) AS nilai ')
@@ -223,22 +239,25 @@ class Cbt_tes_user_model extends CI_Model{
                  ->join('cbt_tes_soal', 'cbt_tes_soal.tessoal_tesuser_id = cbt_tes_user.tesuser_id')
                  ->group_by('cbt_tes_user.tesuser_id')
 				 ->order_by($order)
-                 ->limit($rows, $start);
+                 ->limit((int)$rows, (int)$start);
         return $this->db->get();
 	}
     
     function get_datatable_count($tes_id, $grup_id, $urutkan, $tanggal, $keterangan, $search){
-        $sql = 'tesuser_creation_time>="'.$tanggal[0].'" AND tesuser_creation_time<="'.$tanggal[1].'" AND user_firstname LIKE "%'.$search.'%"';
+        $t0 = $this->db->escape((string)$tanggal[0]);
+        $t1 = $this->db->escape((string)$tanggal[1]);
+        $s_like = $this->db->escape_like_str((string)$search);
+        $sql = 'tesuser_creation_time>='.$t0.' AND tesuser_creation_time<='.$t1.' AND user_firstname LIKE "%'.$s_like.'%"';
 		
         if($tes_id!='semua'){
-            $sql = $sql.' AND tesuser_tes_id="'.$tes_id.'"';
+            $sql = $sql.' AND tesuser_tes_id='.(int)$tes_id;
         }
         if($grup_id!='semua'){
-            $sql = $sql.' AND user_grup_id="'.$grup_id.'"';
+            $sql = $sql.' AND user_grup_id='.(int)$grup_id;
         }
 		
 		if(!empty($keterangan)){
-			$sql = $sql.' AND user_detail LIKE "%'.$keterangan.'%"';
+			$sql = $sql.' AND user_detail LIKE "%'.$this->db->escape_like_str((string)$keterangan).'%"';
 		}
 
 		$this->db->select('COUNT(*) AS hasil')
@@ -263,7 +282,7 @@ class Cbt_tes_user_model extends CI_Model{
     function get_datatable_evaluasi($start, $rows, $tes_id, $urutkan){
         $sql = '';
         if(!empty($tes_id)){
-            $sql = ' AND tesuser_tes_id="'.$tes_id.'"';
+            $sql = ' AND tesuser_tes_id='.(int)$tes_id;
         }
         $order = '';
         if($urutkan=='soal'){
@@ -279,14 +298,14 @@ class Cbt_tes_user_model extends CI_Model{
                  ->join('cbt_tes_soal', 'cbt_tes_soal.tessoal_tesuser_id = cbt_tes_user.tesuser_id')
                  ->join('cbt_soal', 'cbt_tes_soal.tessoal_soal_id = cbt_soal.soal_id')
                  ->order_by($order)
-                 ->limit($rows, $start);
+                 ->limit((int)$rows, (int)$start);
         return $this->db->get();
     }
     
     function get_datatable_evaluasi_count($tes_id, $order){
         $sql = '';
         if(!empty($tes_id)){
-            $sql = ' AND tesuser_tes_id="'.$tes_id.'"';
+            $sql = ' AND tesuser_tes_id='.(int)$tes_id;
         }
 
         $this->db->select('COUNT(*) AS hasil')
@@ -306,9 +325,27 @@ class Cbt_tes_user_model extends CI_Model{
      *
      * @return     <type>  The datatable.
      */
+    private function _parse_token_in_list($token){
+        $raw = (string)$token;
+        // Token dapat berupa "'ABC','DEF'" dari GROUP_CONCAT atau string tunggal
+        $parts = explode(',', $raw);
+        $clean = array();
+        foreach($parts as $p){
+            $val = trim($p, " \t\n\r\0\x0B'\"");
+            if($val !== ''){
+                $clean[] = $val;
+            }
+        }
+        if(empty($clean)){
+            $clean[] = '';
+        }
+        return $clean;
+    }
+
     function get_datatable_operator($start, $rows, $token){
+        $token_list = $this->_parse_token_in_list($token);
         $this->db->select('cbt_tes_user.*,cbt_user_grup.grup_nama, cbt_tes.*, cbt_user.*, SUM(`cbt_tes_soal`.`tessoal_nilai`) AS nilai ')
-                 ->where('(tesuser_token IN ('.$token.'))')
+                 ->where_in('tesuser_token', $token_list)
                  ->from($this->table)
                  ->join('cbt_user', 'cbt_tes_user.tesuser_user_id = cbt_user.user_id')
                  ->join('cbt_user_grup', 'cbt_user.user_grup_id = cbt_user_grup.grup_id')
@@ -316,13 +353,14 @@ class Cbt_tes_user_model extends CI_Model{
                  ->join('cbt_tes_soal', 'cbt_tes_soal.tessoal_tesuser_id = cbt_tes_user.tesuser_id')
                  ->group_by('cbt_tes_user.tesuser_id')
                  ->order_by('tesuser_creation_time DESC')
-                 ->limit($rows, $start);
+                 ->limit((int)$rows, (int)$start);
         return $this->db->get();
     }
     
     function get_datatable_operator_count($token){
+        $token_list = $this->_parse_token_in_list($token);
         $this->db->select('COUNT(*) AS hasil')
-                 ->where('(tesuser_token IN ('.$token.'))')
+                 ->where_in('tesuser_token', $token_list)
                  ->from($this->table);
         return $this->db->get();
     }

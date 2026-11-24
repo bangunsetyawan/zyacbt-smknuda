@@ -439,8 +439,9 @@ class Tes_kerjakan extends Tes_Controller {
     function get_soal_by_tessoal($tessoal_id=null, $tesuser_id=null){
         $data['data'] = 0;
         if(!empty($tessoal_id) AND !empty($tesuser_id)){
-            if($this->_is_own_tesuser($tesuser_id)){
-                $data_soal = $this->get_soal($tessoal_id, $tesuser_id);
+            $own_ts = $this->_get_own_tessoal($tessoal_id);
+            if($own_ts && (int)$own_ts->tessoal_tesuser_id === (int)$tesuser_id){
+                $data_soal = $this->get_soal((int)$tessoal_id, (int)$tesuser_id);
                 $data['data'] = $data_soal['data'];
                 if(!empty($data_soal['tes_soal'])){
                     $data['tes_soal'] = $data_soal['tes_soal'];
@@ -529,9 +530,12 @@ class Tes_kerjakan extends Tes_Controller {
                 $query_soal = $this->cbt_tes_soal_model->get_by_tessoal_limit($tessoal_id, 1);
                 $soal = '';
                 if($query_soal->num_rows()>0){
-                    $data['tes_soal_id'] = $tessoal_id;
-
                     $query_soal = $query_soal->row();
+                    if((int)$query_soal->tessoal_tesuser_id !== (int)$tesuser_id){
+                        $data['data'] = 0;
+                        return $data;
+                    }
+                    $data['tes_soal_id'] = $tessoal_id;
 
                     // Soal Ragu-ragu
                     $data['tes_ragu'] = $query_soal->tessoal_ragu;

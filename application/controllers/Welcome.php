@@ -106,7 +106,8 @@ class Welcome extends CI_Controller {
 				if($hasil==1){
 					$result = $this->cbt_user_model->get_by_username($username);
 					
-					// Menyimpan session
+					// Regenerasi session ID saat login & simpan session
+					$this->session->sess_regenerate(TRUE);
 					$tanda = '@ZYACBT@';
 					$this->session->set_userdata('cbt_tes_tanda',$tanda.$result->user_name.$tanda);
 					$this->session->set_userdata('cbt_tes_user_id',$result->user_name);

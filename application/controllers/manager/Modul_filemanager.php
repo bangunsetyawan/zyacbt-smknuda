@@ -22,21 +22,64 @@ class Modul_filemanager extends Member_Controller {
         $this->template->display_admin($this->kelompok.'/modul_filemanager_view', 'File Manager', $data);
     }
 
+    /**
+     * Validasi dan kunci path agar tidak pernah keluar dari base upload_path (mencegah Path Traversal ../)
+     */
+    private function _resolve_safe_upload_path($rel_posisi = '') {
+        $base = rtrim((string)$this->config->item('upload_path'), '/\\');
+        $real_base = realpath($base);
+        if ($real_base === false) {
+            return false;
+        }
+        $rel = trim(str_replace('\\', '/', (string)$rel_posisi), '/');
+        if ($rel === '') {
+            return $base;
+        }
+        // Tolak segmen .. atau karakter berbahaya
+        $parts = explode('/', $rel);
+        $clean_parts = array();
+        foreach ($parts as $p) {
+            $p = trim($p);
+            if ($p === '' || $p === '.' || $p === '..' || !preg_match('/^[a-zA-Z0-9._-]+$/', $p)) {
+                return false;
+            }
+            $clean_parts[] = $p;
+        }
+        $candidate = $base . '/' . implode('/', $clean_parts);
+        if (file_exists($candidate)) {
+            $real_cand = realpath($candidate);
+            if ($real_cand === false || strpos($real_cand, $real_base) !== 0) {
+                return false;
+            }
+        }
+        return $candidate;
+    }
+
+    private function _sanitize_single_name($name) {
+        $name = basename(str_replace('\\', '/', trim((string)$name)));
+        if ($name === '' || $name === '.' || $name === '..' || strpos($name, '..') !== false || !preg_match('/^[a-zA-Z0-9._-]+$/', $name)) {
+            return false;
+        }
+        return $name;
+    }
+
     function tambah_dir(){
     	$this->load->library('form_validation');
         
 		$this->form_validation->set_rules('tambah-dir', 'Direktori','required|strip_tags');
         
         if($this->form_validation->run() == TRUE){
-            $dir = $this->input->post('tambah-dir', true);
-            $posisi = $this->input->post('tambah-posisi', true);
-            $posisi = $this->config->item('upload_path').'/'.$posisi;
+            $dir = $this->_sanitize_single_name($this->input->post('tambah-dir', true));
+            $posisi = $this->_resolve_safe_upload_path($this->input->post('tambah-posisi', true));
 
-            if(is_dir($posisi.'/'.$dir)){
+            if($dir === false || $posisi === false || !is_dir($posisi)){
+                $status['status'] = 0;
+                $status['pesan'] = 'Nama direktori atau path tidak valid.';
+            }else if(is_dir($posisi.'/'.$dir)){
             	$status['status'] = 0;
             	$status['pesan'] = 'Direktori sudah ada, silahkan cek kembali';
             }else{
-            	mkdir($posisi.'/'.$dir);
+            	mkdir($posisi.'/'.$dir, 0755);
 
             	$status['status'] = 1;
             	$status['pesan'] = 'Direktori berhasil dibuat';
@@ -51,16 +94,24 @@ class Modul_filemanager extends Member_Controller {
     }
 
     function upload_file(){
-    	$posisi = $this->input->post('upload-posisi', true);
-    	$posisi = $this->config->item('upload_path').'/'.$posisi;
+    	$posisi = $this->_resolve_safe_upload_path($this->input->post('upload-posisi', true));
+    	if($posisi === false || !is_dir($posisi)){
+    		echo json_encode(array('status' => 0, 'pesan' => 'Direktori tujuan upload tidak valid.'));
+    		return;
+    	}
 
     	$field_name = 'upload-file';
         if(!empty($_FILES[$field_name]['name'])){
 	    	$config['upload_path'] = $posisi;
 		    $config['allowed_types'] = 'jpg|png|jpeg|mp3';
-		    $config['max_size']	= '0';
+		    $config['max_size']	= '10240';
 		    $config['overwrite'] = true;
-		    $config['file_name'] = strtolower($_FILES[$field_name]['name']);
+		    $safe_name = $this->_sanitize_single_name(strtolower($_FILES[$field_name]['name']));
+		    if($safe_name === false){
+		    	echo json_encode(array('status' => 0, 'pesan' => 'Nama file tidak valid.'));
+		    	return;
+		    }
+		    $config['file_name'] = $safe_name;
 
 		    if(file_exists($posisi.'/'.$config['file_name'])){
         		$status['status'] = 0;
@@ -90,11 +141,13 @@ class Modul_filemanager extends Member_Controller {
 		$this->form_validation->set_rules('hapus-file', 'File','required|strip_tags');
         
         if($this->form_validation->run() == TRUE){
-            $file = $this->input->post('hapus-file', true);
-            $posisi = $this->input->post('hapus-posisi', true);
-            $posisi = $this->config->item('upload_path').'/'.$posisi;
+            $file = $this->_sanitize_single_name($this->input->post('hapus-file', true));
+            $posisi = $this->_resolve_safe_upload_path($this->input->post('hapus-posisi', true));
 
-            if(is_dir($posisi.'/'.$file)){
+            if($file === false || $posisi === false || $file === '.htaccess' || $file === '.gitkeep' || !file_exists($posisi.'/'.$file)){
+                $status['status'] = 0;
+                $status['pesan'] = 'File atau direktori tidak valid.';
+            }else if(is_dir($posisi.'/'.$file)){
             	delete_files($posisi.'/'.$file, TRUE);
             	rmdir($posisi.'/'.$file);
 
@@ -116,7 +169,7 @@ class Modul_filemanager extends Member_Controller {
     }
 
     function get_datatable(){
-    	$posisi = $this->input->get('posisi');
+    	$posisi_raw = $this->input->get('posisi');
 
 		// variable initialization
 		$search = "";
@@ -133,8 +186,11 @@ class Modul_filemanager extends Member_Controller {
 		$rows = $this->get_rows();
 
 		// run query to get user listing
-		$posisi = $this->config->item('upload_path').'/'.$posisi;
-		$query = directory_map($posisi, 1);
+		$posisi = $this->_resolve_safe_upload_path($posisi_raw);
+		$query = ($posisi !== false && is_dir($posisi)) ? directory_map($posisi, 1) : array();
+		if(!is_array($query)){
+			$query = array();
+		}
 
 	    // get result after running query and put it in array
 	    $iTotal = 0;

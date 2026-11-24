@@ -28,13 +28,15 @@ class Usermenu_model extends CI_Model{
     }
     
     function get_all_menu($start, $rows, $search){
-		$sql = 'SELECT * FROM user_menu WHERE user_menu.kode_menu LIKE "%'.$search.'%" OR user_menu.nama_menu LIKE "%'.$search.'%" ORDER BY tipe ASC, nama_menu ASC LIMIT '.$start.','.$rows;
-		return $this->db->query($sql);
+        $like = '%'.$this->db->escape_like_str((string)$search).'%';
+		$sql = 'SELECT * FROM user_menu WHERE user_menu.kode_menu LIKE ? OR user_menu.nama_menu LIKE ? ORDER BY tipe ASC, nama_menu ASC LIMIT ?, ?';
+		return $this->db->query($sql, array($like, $like, (int)$start, (int)$rows));
 	}
     
     function get_all_menu_count($search){
-		$sql = 'SELECT COUNT(*) AS hasil FROM user_menu WHERE user_menu.kode_menu LIKE "%'.$search.'%" OR user_menu.nama_menu LIKE "%'.$search.'%"';
-		return $this->db->query($sql);
+        $like = '%'.$this->db->escape_like_str((string)$search).'%';
+		$sql = 'SELECT COUNT(*) AS hasil FROM user_menu WHERE user_menu.kode_menu LIKE ? OR user_menu.nama_menu LIKE ?';
+		return $this->db->query($sql, array($like, $like));
 	}
     
     function get_menu_by_id($id){

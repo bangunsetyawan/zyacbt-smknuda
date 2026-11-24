@@ -339,7 +339,7 @@ $config['cache_query_string'] = FALSE;
 | https://codeigniter.com/user_guide/libraries/encryption.html
 |
 */
-$config['encryption_key'] = 'sdjs djhas dhkajshdfsdfsKJKAhsa ahdsa d*&^876ad a7dud kahdkjas dias76dkashd sd dkfsdfsdfsdfsdjashdja shdkjhKJHSKjd s8d9789sd sd';
+$config['encryption_key'] = getenv('APP_ENCRYPTION_KEY') ?: 'sdjs djhas dhkajshdfsdfsKJKAhsa ahdsa d*&^876ad a7dud kahdkjas dias76dkashd sd dkfsdfsdfsdfsdjashdja shdkjhKJHSKjd s8d9789sd sd';
 
 /*
 |--------------------------------------------------------------------------
@@ -398,7 +398,7 @@ $config['sess_expiration'] = 0; //Sessi hilang selama browser tidak ditutup
 $config['sess_save_path'] = 'cbt_sessions';
 $config['sess_match_ip'] = FALSE;
 $config['sess_time_to_update'] = 300;
-$config['sess_regenerate_destroy'] = FALSE;
+$config['sess_regenerate_destroy'] = TRUE;
 $config['sess_table_name'] = 'cbt_sessions';
 
 /** Session dengan file
@@ -440,7 +440,7 @@ $config['cookie_prefix']	= '';
 $config['cookie_domain']	= '';
 $config['cookie_path']		= '/';
 $config['cookie_secure']	= FALSE;
-$config['cookie_httponly'] 	= FALSE;
+$config['cookie_httponly'] 	= TRUE;
 
 /*
 |--------------------------------------------------------------------------

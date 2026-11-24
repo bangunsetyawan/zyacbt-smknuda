@@ -128,7 +128,7 @@ class Modul_import_word extends Member_Controller {
 							$soal = $soal.'
 								<tr>
 								<td valign="top"><p>'.$counter.'</p></td>
-								<td colspan="2">'.$this->innerHTML($cols->item(2)).'</td>
+								<td colspan="2">'.$this->_sanitize_question_html($this->innerHTML($cols->item(2))).'</td>
 								<td width="15%"></td>
 								</tr>
 							';
@@ -138,7 +138,7 @@ class Modul_import_word extends Member_Controller {
 									<tr>
 										<td width="5%"> </td>
 										<td width="5%" valign="top">'.$kunci.'</td>
-										<td width="75%">'.$this->innerHTML($cols->item(2)).'</td>
+										<td width="75%">'.$this->_sanitize_question_html($this->innerHTML($cols->item(2))).'</td>
 										<td width="15%"></td>
 									</tr>
 								';
@@ -176,18 +176,22 @@ class Modul_import_word extends Member_Controller {
         $this->form_validation->set_rules('konfirmasi-topik', 'Topik','required');
 		$this->form_validation->set_rules('konfirmasi-import-soal', 'Daftar Soal','required');
 		if($this->form_validation->run() == TRUE){
-			$id_topik = $this->input->post('konfirmasi-topik', true);
+			$id_topik = (int)$this->input->post('konfirmasi-topik', true);
 			$daftar_soal = $this->input->post('konfirmasi-import-soal', false);
 	    	$posisi = $this->config->item('upload_path').'/topik_'.$id_topik.'';
 			
 			$doc = new DOMDocument();
-			$doc->loadHTML($daftar_soal);
+			$prev_err = libxml_use_internal_errors(true);
+			$doc->loadHTML('<?xml encoding="UTF-8">' . $daftar_soal, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD | LIBXML_NONET);
+			libxml_clear_errors();
+			libxml_use_internal_errors($prev_err);
 			$tables = $doc->getElementsByTagName('table');
 			if(!empty($tables->item(0)->nodeValue)){
 				$rows = $tables->item(0)->getElementsByTagName('tr');
 				$counter_soal = 0;
 				$counter_jawaban = 0;
 				$soal_id = 0;
+				$saved_imgs = 0;
 				foreach ($rows as $row) {
 					/*** get each column by tag name ***/ 
 					$cols = $row->getElementsByTagName('td'); 
@@ -210,28 +214,9 @@ class Modul_import_word extends Member_Controller {
 							$kunci=1;
 						}
 						if($jenis=='SOAL'){
-							// Menyimpan image base64 menjadi file
-							$soal = $this->innerHTML($cols->item(2));
-							
-							$tags = $cols->item(2)->getElementsByTagName('img');
-							foreach ($tags as $tag) {
-								$soal_image = $tag->getAttribute('src');
-								if (strpos($soal_image, 'data:image/') !== false) {
-									$soal_image_array = preg_split("@[:;,]+@", $soal_image);
-									$extensi = explode('/', $soal_image_array[1]);
-
-									$file_name = $posisi.'/'.uniqid().'.'.$extensi[1];
-
-									if(!is_dir($posisi)){
-										mkdir($posisi);
-									}
-
-									// menyimpan file dari base64
-									file_put_contents($file_name, base64_decode($soal_image_array[3]));
-									
-									$soal = str_replace($soal_image, base_url().$file_name, $soal);
-								}
-							}
+							// Menyimpan image base64 menjadi file dengan whitelist ekstensi aman
+							$soal = $this->_sanitize_question_html($this->innerHTML($cols->item(2)));
+							$soal = $this->_extract_base64_images_in_html($soal, $posisi, $saved_imgs);
 							$soal = str_replace(base_url(),"[base_url]", $soal);
 							
 							// Simpan soal
@@ -244,28 +229,9 @@ class Modul_import_word extends Member_Controller {
 							$soal_id = $this->cbt_soal_model->save($question);
 							$counter_soal++;
 						}else if($jenis=='JAWABAN'){
-							//$this->innerHTML($cols->item(2))
 							if($soal_id!=0){
-								$jawaban = $this->innerHTML($cols->item(2));
-								$tags = $cols->item(2)->getElementsByTagName('img');
-								foreach ($tags as $tag) {
-									$jawaban_image = $tag->getAttribute('src');
-									if (strpos($jawaban_image, 'data:image/') !== false) {
-										$jawaban_image_array = preg_split("@[:;,]+@", $jawaban_image);
-										$extensi = explode('/', $jawaban_image_array[1]);
-
-										$file_name = $posisi.'/'.uniqid().'.'.$extensi[1];
-
-										if(!is_dir($posisi)){
-											mkdir($posisi);
-										}
-
-										// menyimpan file dari base64
-										file_put_contents($file_name, base64_decode($jawaban_image_array[3]));
-										
-										$jawaban = str_replace($jawaban_image, base_url().$file_name, $jawaban);
-									}
-								}
+								$jawaban = $this->_sanitize_question_html($this->innerHTML($cols->item(2)));
+								$jawaban = $this->_extract_base64_images_in_html($jawaban, $posisi, $saved_imgs);
 								$jawaban = str_replace(base_url(),"[base_url]", $jawaban);
 								
 								$data['jawaban_soal_id'] = $soal_id;
@@ -312,6 +278,24 @@ class Modul_import_word extends Member_Controller {
 			return $html;
 		}
 		return preg_replace( '@^<' . $n->nodeName .'[^>]*>|</'. $n->nodeName .'>$@', '', $html );
+	}
+
+	/**
+	 * Sanitasi HTML soal/jawaban agar aman dari Stored XSS (membuang tag berbahaya, event handler on*, dan URI javascript:)
+	 */
+	private function _sanitize_question_html($html) {
+		$html = (string) $html;
+		if ($html === '') {
+			return '';
+		}
+		// Hapus blok tag berbahaya beserta isinya
+		$html = preg_replace('#<(script|iframe|object|embed|applet|form|input|button|select|textarea|meta|link|base|style)[^>]*>.*?</\1>#is', '', $html);
+		$html = preg_replace('#<(script|iframe|object|embed|applet|form|input|button|select|textarea|meta|link|base|style)[^>]*/?>#is', '', $html);
+		// Hapus atribut event handler on* (onclick, onerror, onload, dll.)
+		$html = preg_replace('/\s+on[a-z]+\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $html);
+		// Netralisir javascript:/vbscript:/data:text/html pada href/src
+		$html = preg_replace('/\s+(href|src|action|xlink:href)\s*=\s*(["\']?)\s*(?:javascript|vbscript|data\s*:\s*text\/html)[^"\'>\s]*\2/i', '', $html);
+		return trim($html);
 	}
 
     function import_file($inputfile, $id_topik){
@@ -613,6 +597,18 @@ class Modul_import_word extends Member_Controller {
 		$names = is_array($_FILES['files']['name']) ? $_FILES['files']['name'] : array($_FILES['files']['name']);
 		$tmps = is_array($_FILES['files']['tmp_name']) ? $_FILES['files']['tmp_name'] : array($_FILES['files']['tmp_name']);
 		$errors = is_array($_FILES['files']['error']) ? $_FILES['files']['error'] : array($_FILES['files']['error']);
+		$sizes = isset($_FILES['files']['size'])
+			? (is_array($_FILES['files']['size']) ? $_FILES['files']['size'] : array($_FILES['files']['size']))
+			: array();
+
+		$max_files_per_batch = 60;
+		$max_file_bytes = 25 * 1024 * 1024; // 25 MB per file
+		if (count($names) > $max_files_per_batch) {
+			$this->_remove_dir_recursive($batch_dir);
+			$status['pesan'] = 'Maksimal ' . $max_files_per_batch . ' file dalam satu kali batch upload.';
+			echo json_encode($status);
+			return;
+		}
 
 		$manifest = array();
 		$results = array();
@@ -626,6 +622,10 @@ class Modul_import_word extends Member_Controller {
 			}
 			if ($errors[$i] !== UPLOAD_ERR_OK) {
 				$skipped_notes[] = $orig_name . ' (gagal upload kode ' . intval($errors[$i]) . ')';
+				continue;
+			}
+			if (isset($sizes[$i]) && intval($sizes[$i]) > $max_file_bytes) {
+				$skipped_notes[] = $orig_name . ' (melebihi batas ukuran 25 MB)';
 				continue;
 			}
 
@@ -1528,7 +1528,7 @@ class Modul_import_word extends Member_Controller {
 		$raw_utf8 = '<?xml encoding="UTF-8">' . $raw;
 		$dom = new DOMDocument();
 		$prev_err = libxml_use_internal_errors(true);
-		$loaded = $dom->loadHTML($raw_utf8, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+		$loaded = $dom->loadHTML($raw_utf8, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD | LIBXML_NONET);
 		libxml_clear_errors();
 		libxml_use_internal_errors($prev_err);
 
@@ -1594,7 +1594,7 @@ class Modul_import_word extends Member_Controller {
 					continue;
 				}
 
-				$html = trim($this->innerHTML($cells[2]));
+				$html = $this->_sanitize_question_html(trim($this->innerHTML($cells[2])));
 				$has_img = (stripos($html, '<img') !== false);
 				$plain_check = trim(html_entity_decode(strip_tags(str_replace('&nbsp;', ' ', $html)), ENT_QUOTES, 'UTF-8'));
 				$plain_check = preg_replace('/[\x{00A0}\s]+/u', '', $plain_check);
@@ -1750,7 +1750,7 @@ class Modul_import_word extends Member_Controller {
 		$rels_xml = $zip->getFromName('word/_rels/document.xml.rels');
 		if ($rels_xml !== false) {
 			$rels_dom = new DOMDocument();
-			if (@$rels_dom->loadXML($rels_xml)) {
+			if (@$rels_dom->loadXML($rels_xml, LIBXML_NONET)) {
 				$rel_nodes = $rels_dom->getElementsByTagName('Relationship');
 				foreach ($rel_nodes as $rn) {
 					$rid = $rn->getAttribute('Id');
@@ -1769,7 +1769,7 @@ class Modul_import_word extends Member_Controller {
 
 		$dom = new DOMDocument();
 		$prev_err = libxml_use_internal_errors(true);
-		$loaded = $dom->loadXML($doc_xml);
+		$loaded = $dom->loadXML($doc_xml, LIBXML_NONET);
 		libxml_clear_errors();
 		libxml_use_internal_errors($prev_err);
 

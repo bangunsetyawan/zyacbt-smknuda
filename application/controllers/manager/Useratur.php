@@ -122,7 +122,7 @@ class Useratur extends Member_Controller {
                 
                 $password = $this->input->post('password', true);
                 if($password!='kosongkosong'){
-                    $data_user['password'] = sha1($password);
+                    $data_user['password'] = password_hash((string)$password, PASSWORD_BCRYPT);
                 }
                 
                 $this->users_model->update($data_user, $username);
@@ -155,7 +155,7 @@ class Useratur extends Member_Controller {
                 $status['pesan'] = 'Username sudah terdaftar';
             }else{
                 $data_user['username'] = $username;
-                $data_user['password'] = sha1($this->input->post('password', true));
+                $data_user['password'] = password_hash((string)$this->input->post('password', true), PASSWORD_BCRYPT);
                 $data_user['nama'] = $this->input->post('nama', true);
                 $data_user['level'] = $this->input->post('level', true);
                 $data_user['opsi1'] = $this->input->post('opsi1', true);

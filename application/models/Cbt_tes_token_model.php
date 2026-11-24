@@ -14,7 +14,8 @@ class Cbt_tes_token_model extends CI_Model{
 
     function delete_by_user_date($user_id){
 		$now = date('Y-m-d H:i:s');
-        $this->db->where('DATE(token_ts)<DATE("'.$now.'") AND token_user_id="'.$user_id.'"')
+        $this->db->where('DATE(token_ts)<DATE('.$this->db->escape($now).')', null, false)
+                 ->where('token_user_id', (int)$user_id)
                  ->delete($this->table);
     }
     
@@ -33,7 +34,8 @@ class Cbt_tes_token_model extends CI_Model{
     function count_by_isi($isi){
 		$now = date('Y-m-d H:i:s');
         $this->db->select('COUNT(*) AS hasil')
-                 ->where('token_isi="'.$isi.'" AND DATE(token_ts)=DATE("'.$now.'")')
+                 ->where('token_isi', (string)$isi)
+                 ->where('DATE(token_ts)=DATE('.$this->db->escape($now).')', null, false)
                  ->from($this->table);
         return $this->db->get();
     }
@@ -51,9 +53,10 @@ class Cbt_tes_token_model extends CI_Model{
     function get_by_token_now_limit($token, $limit){
 		$now = date('Y-m-d H:i:s');
         $this->db->select('token_id,token_isi,token_user_id,token_ts,token_aktif,token_tes_id')
-                 ->where('(token_isi="'.$token.'" AND DATE(token_ts)=DATE("'.$now.'"))')
+                 ->where('token_isi', (string)$token)
+                 ->where('DATE(token_ts)=DATE('.$this->db->escape($now).')', null, false)
                  ->from($this->table)
-				 ->limit($limit);
+				 ->limit((int)$limit);
         return $this->db->get();
     }
 
@@ -61,7 +64,8 @@ class Cbt_tes_token_model extends CI_Model{
     function count_by_token_lifetime($token, $lifetime){
 		$now = date('Y-m-d H:i:s');
         $this->db->select('COUNT(*) AS hasil')
-                 ->where('token_isi="'.$token.'" AND token_ts>TIMESTAMPADD(MINUTE,-'.$lifetime.',"'.$now.'")')
+                 ->where('token_isi', (string)$token)
+                 ->where('token_ts>TIMESTAMPADD(MINUTE,-'.(int)$lifetime.','.$this->db->escape($now).')', null, false)
                  ->from($this->table);
         return $this->db->get();
     }
@@ -70,29 +74,31 @@ class Cbt_tes_token_model extends CI_Model{
         $this->db->select('token_id,token_isi,token_user_id,token_ts,token_aktif,token_tes_id')
                  ->where($kolom, $isi)
                  ->from($this->table)
-				 ->limit($limit);
+				 ->limit((int)$limit);
         return $this->db->get();
     }
 
     function get_by_user_now($user_id){
 		$now = date('Y-m-d H:i:s');
-        $sql = 'SELECT GROUP_CONCAT("\'",token_isi,"\'") AS token FROM cbt_tes_token WHERE token_user_id="'.$user_id.'" AND DATE(token_ts)=DATE("'.$now.'") ORDER BY token_id ASC';
+        $sql = 'SELECT GROUP_CONCAT("\'",token_isi,"\'") AS token FROM cbt_tes_token WHERE token_user_id=? AND DATE(token_ts)=DATE(?) ORDER BY token_id ASC';
 
-        return $this->db->query($sql);
+        return $this->db->query($sql, array((int)$user_id, $now));
     }
 	
 	function get_datatable($start, $rows, $kolom, $isi, $username){
-		$this->db->where('('.$kolom.' LIKE "%'.$isi.'%" AND username="'.$username.'")')
+		$this->db->like($kolom, $isi)
+                 ->where('username', (string)$username)
                  ->from($this->table)
 				 ->join('user', 'cbt_tes_token.token_user_id = user.id')
 				 ->order_by('token_id', 'DESC')
-                 ->limit($rows, $start);
+                 ->limit((int)$rows, (int)$start);
         return $this->db->get();
 	}
     
     function get_datatable_count($kolom, $isi, $username){
 		$this->db->select('COUNT(*) AS hasil')
-                 ->where('('.$kolom.' LIKE "%'.$isi.'%" AND username="'.$username.'")')
+                 ->like($kolom, $isi)
+                 ->where('username', (string)$username)
                  ->from($this->table)
 				 ->join('user', 'cbt_tes_token.token_user_id = user.id');
         return $this->db->get();

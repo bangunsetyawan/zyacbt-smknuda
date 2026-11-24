@@ -60,7 +60,7 @@ class Tes_hasil_detail extends Member_Controller {
     
     function get_datatable(){
 		// variable initialization
-		$tesuser_id = $this->input->get('tes_user_id');
+		$tesuser_id = (int)$this->input->get('tes_user_id');
 
 		$search = "";
 		$start = 0;
@@ -172,7 +172,7 @@ class Tes_hasil_detail extends Member_Controller {
 	            	<tr>
 		            	<td width="5%"></td>
 		                <td width="5%">'.$temp->tessoal_nilai.'</td>
-		                <td width="90%" colspan="2"><div style="width:100%;"><pre style="white-space: pre-wrap;word-wrap: break-word;">'.$temp->tessoal_jawaban_text.'</pre></div></td>
+		                <td width="90%" colspan="2"><div style="width:100%;"><pre style="white-space: pre-wrap;word-wrap: break-word;">'.htmlspecialchars((string)$temp->tessoal_jawaban_text, ENT_QUOTES, 'UTF-8').'</pre></div></td>
 		            </tr>
 	            ';
             }else if($temp->soal_tipe==3){
@@ -186,7 +186,7 @@ class Tes_hasil_detail extends Member_Controller {
 	            	<tr>
 		            	<td width="5%"></td>
 		                <td width="5%">'.$temp->tessoal_nilai.'</td>
-		                <td width="90%" colspan="2"><div style="width:100%;">'.$temp->tessoal_jawaban_text.'</div></td>
+		                <td width="90%" colspan="2"><div style="width:100%;">'.htmlspecialchars((string)$temp->tessoal_jawaban_text, ENT_QUOTES, 'UTF-8').'</div></td>
 		            </tr>
 	            ';
             }

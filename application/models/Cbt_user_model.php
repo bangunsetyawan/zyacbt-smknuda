@@ -53,7 +53,8 @@ class Cbt_user_model extends CI_Model{
 
     function count_by_username_password($username, $password){
         $this->db->select('COUNT(*) AS hasil')
-                 ->where('(user_name="'.$username.'" AND user_password="'.$password.'")')
+                 ->where('user_name', (string)$username)
+                 ->where('user_password', (string)$password)
                  ->from($this->table);
         return $this->db->get()->row()->hasil;  
     }
@@ -67,47 +68,47 @@ class Cbt_user_model extends CI_Model{
     }
 	
 	function get_datatable($start, $rows, $kolom, $isi, $group){
-        $query = '';
         if($group!='semua'){
-            $query = 'AND user_grup_id='.$group;
+            $this->db->where('user_grup_id', (int)$group);
         }
-		$this->db->where('('.$kolom.' LIKE "%'.$isi.'%" '.$query.')')
+		$this->db->like($kolom, $isi)
                  ->from($this->table)
 				 ->order_by($kolom, 'ASC')
-                 ->limit($rows, $start);
+                 ->limit((int)$rows, (int)$start);
         return $this->db->get();
 	}
     
     function get_datatable_count($kolom, $isi, $group){
-        $query = '';
         if($group!='semua'){
-            $query = 'AND user_grup_id='.$group;
+            $this->db->where('user_grup_id', (int)$group);
         }
 		$this->db->select('COUNT(*) AS hasil')
-                 ->where('('.$kolom.' LIKE "%'.$isi.'%" '.$query.')')
+                 ->like($kolom, $isi)
                  ->from($this->table);
         return $this->db->get();
 	}
 	
 	function get_datatable_resetlogin($start, $rows, $kolom, $isi, $group){
-        $query = '';
         if($group!='semua'){
-            $query = 'AND user_grup_id='.$group;
+            $this->db->where('user_grup_id', (int)$group);
         }
-		$this->db->where('('.$kolom.' LIKE "%'.$isi.'%" '.$query.' AND (user_login=1 AND DATE(user_login_date)=DATE(NOW())))')
+		$this->db->like($kolom, $isi)
+                 ->where('user_login', 1)
+                 ->where('DATE(user_login_date)=DATE(NOW())', null, false)
                  ->from($this->table)
 				 ->order_by($kolom, 'ASC')
-                 ->limit($rows, $start);
+                 ->limit((int)$rows, (int)$start);
         return $this->db->get();
 	}
     
     function get_datatable_resetlogin_count($kolom, $isi, $group){
-        $query = '';
         if($group!='semua'){
-            $query = 'AND user_grup_id='.$group;
+            $this->db->where('user_grup_id', (int)$group);
         }
 		$this->db->select('COUNT(*) AS hasil')
-                 ->where('('.$kolom.' LIKE "%'.$isi.'%" '.$query.' AND (user_login=1 AND DATE(user_login_date)=DATE(NOW())))')
+                 ->like($kolom, $isi)
+                 ->where('user_login', 1)
+                 ->where('DATE(user_login_date)=DATE(NOW())', null, false)
                  ->from($this->table);
         return $this->db->get();
 	}
@@ -116,13 +117,15 @@ class Cbt_user_model extends CI_Model{
 	* export data user yang belum mengerjakan
 	*/
 	function get_by_tes_group_urut_tanggal($tes_id, $grup_id, $urutkan, $tanggal, $keterangan){
-        $sql = 'tes_begin_time>="'.$tanggal[0].'" AND tes_end_time<="'.$tanggal[1].'" AND tesuser_id IS NULL';
+        $t0 = $this->db->escape((string)$tanggal[0]);
+        $t1 = $this->db->escape((string)$tanggal[1]);
+        $sql = 'tes_begin_time>='.$t0.' AND tes_end_time<='.$t1.' AND tesuser_id IS NULL';
 		
         if($tes_id!='semua'){
-            $sql = $sql.' AND tes_id="'.$tes_id.'"';
+            $sql = $sql.' AND tes_id='.(int)$tes_id;
         }
         if($grup_id!='semua'){
-            $sql = $sql.' AND user_grup_id="'.$grup_id.'"';
+            $sql = $sql.' AND user_grup_id='.(int)$grup_id;
         }
         $order = '';
         if($urutkan=='nama'){
@@ -134,7 +137,7 @@ class Cbt_user_model extends CI_Model{
         }
 		
 		if(!empty($keterangan)){
-			$sql = $sql.' AND user_detail LIKE "%'.$keterangan.'%"';
+			$sql = $sql.' AND user_detail LIKE "%'.$this->db->escape_like_str((string)$keterangan).'%"';
 		}
 				 
 		$this->db->select('cbt_tes.*,cbt_user_grup.grup_nama, cbt_tes.*, cbt_user.*, "0" AS nilai, "Belum mengerjakan" AS tesuser_creation_time')
@@ -153,13 +156,16 @@ class Cbt_user_model extends CI_Model{
 	*
 	*/
 	function get_datatable_hasiltes($start, $rows, $tes_id, $grup_id, $urutkan, $tanggal, $keterangan, $search){
-        $sql = 'tes_begin_time>="'.$tanggal[0].'" AND tes_end_time<="'.$tanggal[1].'" AND tesuser_id IS NULL AND user_firstname LIKE "%'.$search.'%"';
+        $t0 = $this->db->escape((string)$tanggal[0]);
+        $t1 = $this->db->escape((string)$tanggal[1]);
+        $s_like = $this->db->escape_like_str((string)$search);
+        $sql = 'tes_begin_time>='.$t0.' AND tes_end_time<='.$t1.' AND tesuser_id IS NULL AND user_firstname LIKE "%'.$s_like.'%"';
 		
         if($tes_id!='semua'){
-            $sql = $sql.' AND tes_id="'.$tes_id.'"';
+            $sql = $sql.' AND tes_id='.(int)$tes_id;
         }
         if($grup_id!='semua'){
-            $sql = $sql.' AND user_grup_id="'.$grup_id.'"';
+            $sql = $sql.' AND user_grup_id='.(int)$grup_id;
         }
         $order = '';
         if($urutkan=='nama'){
@@ -171,7 +177,7 @@ class Cbt_user_model extends CI_Model{
         }
 		
 		if(!empty($keterangan)){
-			$sql = $sql.' AND user_detail LIKE "%'.$keterangan.'%"';
+			$sql = $sql.' AND user_detail LIKE "%'.$this->db->escape_like_str((string)$keterangan).'%"';
 		}
 
 		$this->db->select('cbt_tes.*,cbt_user_grup.grup_nama, cbt_tes.*, cbt_user.*, "0" AS nilai')
@@ -182,22 +188,25 @@ class Cbt_user_model extends CI_Model{
                  ->join('cbt_tes', 'cbt_tesgrup.tstgrp_tes_id = cbt_tes.tes_id')
 				 ->join('cbt_tes_user', '(cbt_tes_user.tesuser_tes_id = cbt_tes.tes_id) AND (cbt_tes_user.tesuser_user_id = cbt_user.user_id)', 'left')
 				 ->order_by($order)
-                 ->limit($rows, $start);
+                 ->limit((int)$rows, (int)$start);
         return $this->db->get();
 	}
     
     function get_datatable_hasiltes_count($tes_id, $grup_id, $urutkan, $tanggal, $keterangan, $search){
-        $sql = '(tes_begin_time>="'.$tanggal[0].'" AND tes_end_time<="'.$tanggal[1].'") AND tesuser_id IS NULL AND user_firstname LIKE "%'.$search.'%"';
+        $t0 = $this->db->escape((string)$tanggal[0]);
+        $t1 = $this->db->escape((string)$tanggal[1]);
+        $s_like = $this->db->escape_like_str((string)$search);
+        $sql = '(tes_begin_time>='.$t0.' AND tes_end_time<='.$t1.') AND tesuser_id IS NULL AND user_firstname LIKE "%'.$s_like.'%"';
 		
         if($tes_id!='semua'){
-            $sql = $sql.' AND tes_id="'.$tes_id.'"';
+            $sql = $sql.' AND tes_id='.(int)$tes_id;
         }
         if($grup_id!='semua'){
-            $sql = $sql.' AND user_grup_id="'.$grup_id.'"';
+            $sql = $sql.' AND user_grup_id='.(int)$grup_id;
         }
 		
 		if(!empty($keterangan)){
-			$sql = $sql.' AND user_detail LIKE "%'.$keterangan.'%"';
+			$sql = $sql.' AND user_detail LIKE "%'.$this->db->escape_like_str((string)$keterangan).'%"';
 		}
 
 		$this->db->select('COUNT(*) AS hasil')
@@ -215,9 +224,10 @@ class Cbt_user_model extends CI_Model{
 	*
 	*/
 	function get_datatable_cekpeserta($start, $rows, $tes_id, $grup_id, $search){
-        $sql = 'tesuser_id IS NULL AND user_firstname LIKE "%'.$search.'%"';
+        $s_like = $this->db->escape_like_str((string)$search);
+        $sql = 'tesuser_id IS NULL AND user_firstname LIKE "%'.$s_like.'%"';
 		
-        $sql = $sql.' AND tes_id="'.$tes_id.'" AND user_grup_id="'.$grup_id.'"';
+        $sql = $sql.' AND tes_id='.(int)$tes_id.' AND user_grup_id='.(int)$grup_id;
         $order = 'user_firstname ASC';
 		
 
@@ -229,14 +239,15 @@ class Cbt_user_model extends CI_Model{
                  ->join('cbt_tes', 'cbt_tesgrup.tstgrp_tes_id = cbt_tes.tes_id')
 				 ->join('cbt_tes_user', '(cbt_tes_user.tesuser_tes_id = cbt_tes.tes_id) AND (cbt_tes_user.tesuser_user_id = cbt_user.user_id)', 'left')
 				 ->order_by($order)
-                 ->limit($rows, $start);
+                 ->limit((int)$rows, (int)$start);
         return $this->db->get();
 	}
     
     function get_datatable_cekpeserta_count($tes_id, $grup_id, $search){
-        $sql = 'tesuser_id IS NULL AND user_firstname LIKE "%'.$search.'%"';
+        $s_like = $this->db->escape_like_str((string)$search);
+        $sql = 'tesuser_id IS NULL AND user_firstname LIKE "%'.$s_like.'%"';
 		
-        $sql = $sql.' AND tes_id="'.$tes_id.'" AND user_grup_id="'.$grup_id.'"';
+        $sql = $sql.' AND tes_id='.(int)$tes_id.' AND user_grup_id='.(int)$grup_id;
         $order = 'user_firstname ASC';
 
 		$this->db->select('COUNT(*) AS hasil')

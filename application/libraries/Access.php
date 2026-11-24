@@ -31,8 +31,17 @@ class Access{
 	function login($username, $password){
 		$result = $this->users_model->get_login_info($username);
 		if($result){
-			$password = sha1($password);
-			if($password === $result->password){
+			$stored = (string)$result->password;
+			$valid = false;
+			if(strpos($stored, '$2y$') === 0 || strpos($stored, '$2a$') === 0 || strpos($stored, '$argon2') === 0){
+				$valid = password_verify((string)$password, $stored);
+			}else if(sha1((string)$password) === $stored){
+				$valid = true;
+				// Auto-upgrade legacy SHA1 hash ke Bcrypt secara transparan
+				$this->users_model->change_password($result->username, (string)$password);
+			}
+			if($valid){
+				$this->CI->session->sess_regenerate(TRUE);
 				$this->CI->session->set_userdata('cbt_user_id',$result->username);
                 $this->CI->session->set_userdata('cbt_nama',$result->nama);
                 $this->CI->session->set_userdata('cbt_level',$result->level);
@@ -110,5 +119,6 @@ class Access{
 		$this->CI->session->unset_userdata('cbt_level');
 		$this->CI->session->unset_userdata('cbt_opsi1');
 		$this->CI->session->unset_userdata('cbt_opsi2');
+		$this->CI->session->sess_regenerate(TRUE);
 	}
 }
