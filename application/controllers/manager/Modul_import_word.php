@@ -1581,13 +1581,16 @@ class Modul_import_word extends Member_Controller {
 						}
 					}
 				}
-				if (count($cells) < 4) {
+				if (count($cells) < 3) {
 					continue;
 				}
 
 				$jenis_raw = trim((string) $cells[1]->textContent);
 				$jenis = strtoupper(preg_replace('/\s+/', '', $jenis_raw));
 				if ($jenis !== 'SOAL' && $jenis !== 'JAWABAN') {
+					continue;
+				}
+				if ($jenis === 'JAWABAN' && count($cells) < 4) {
 					continue;
 				}
 
@@ -1608,7 +1611,8 @@ class Modul_import_word extends Member_Controller {
 				if ($jenis === 'SOAL') {
 					$tbl_items[] = array(
 						'soal_html' => $html,
-						'jawaban' => array()
+						'jawaban' => array(),
+						'col_count' => count($cells)
 					);
 					$current_idx = count($tbl_items) - 1;
 				} elseif ($jenis === 'JAWABAN' && $current_idx >= 0) {
@@ -1630,7 +1634,11 @@ class Modul_import_word extends Member_Controller {
 			if (!empty($tbl_items)) {
 				if ($tbl_has_jawaban) {
 					foreach ($tbl_items as $ti) {
-						$pg_items[] = $ti;
+						if (empty($ti['jawaban']) && isset($ti['col_count']) && $ti['col_count'] === 3) {
+							$esai_items[] = $ti;
+						} else {
+							$pg_items[] = $ti;
+						}
 					}
 				} else {
 					// Tabel berisi SOAL saja tanpa baris JAWABAN -> Soal Uraian / Esai
@@ -1800,13 +1808,16 @@ class Modul_import_word extends Member_Controller {
 
 			foreach ($rows as $row) {
 				$cells = $xpath->query('./w:tc', $row);
-				if (!$cells || $cells->length < 4) {
+				if (!$cells || $cells->length < 3) {
 					continue;
 				}
 
 				$jenis_raw = trim((string) $cells->item(1)->textContent);
 				$jenis = strtoupper(preg_replace('/\s+/', '', $jenis_raw));
 				if ($jenis !== 'SOAL' && $jenis !== 'JAWABAN') {
+					continue;
+				}
+				if ($jenis === 'JAWABAN' && $cells->length < 4) {
 					continue;
 				}
 
@@ -1827,7 +1838,8 @@ class Modul_import_word extends Member_Controller {
 				if ($jenis === 'SOAL') {
 					$tbl_items[] = array(
 						'soal_html' => $html,
-						'jawaban' => array()
+						'jawaban' => array(),
+						'col_count' => $cells->length
 					);
 					$current_idx = count($tbl_items) - 1;
 				} elseif ($jenis === 'JAWABAN' && $current_idx >= 0) {
@@ -1849,7 +1861,11 @@ class Modul_import_word extends Member_Controller {
 			if (!empty($tbl_items)) {
 				if ($tbl_has_jawaban) {
 					foreach ($tbl_items as $ti) {
-						$items[] = $ti;
+						if (empty($ti['jawaban']) && isset($ti['col_count']) && $ti['col_count'] === 3) {
+							$esai_items[] = $ti;
+						} else {
+							$items[] = $ti;
+						}
 					}
 				} else {
 					foreach ($tbl_items as $ti) {
