@@ -122,9 +122,5 @@
                     aoData.push( { "name": "tes_user_id", "value": $('#tes-user-id').val()} );
                   }
          });
-		 
-		$( document ).ready(function() {
-			refresh_topik();
-		});
     });
 </script>

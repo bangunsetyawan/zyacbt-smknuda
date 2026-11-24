@@ -64,6 +64,11 @@ class Users_model extends CI_Model{
 	function cek_akses($kode_menu, $level){
 		$sql='SELECT COUNT(*) AS hasil FROM user_akses WHERE user_akses.kode_menu="'.$kode_menu.'" AND user_akses.level="'.$level.'"';
 		$hasil=$this->db->query($sql)->row()->hasil;
+		if($hasil == 0 && $kode_menu === 'modul-import-word'){
+			// Fallback: level yang memiliki akses modul-import (spreadsheet lama) otomatis diizinkan akses modul-import-word
+			$sql_fb = 'SELECT COUNT(*) AS hasil FROM user_akses WHERE user_akses.kode_menu="modul-import" AND user_akses.level="'.$level.'"';
+			$hasil = $this->db->query($sql_fb)->row()->hasil;
+		}
 
 		return $hasil;
 	}
@@ -78,6 +83,11 @@ class Users_model extends CI_Model{
             $sql='SELECT COUNT(*) AS hasil FROM user_akses WHERE user_akses.kode_menu="'.$kode_menu.'" AND user_akses.level="'.$level.'" AND user_akses.edit=1';
         }
 		$hasil=$this->db->query($sql)->row()->hasil;
+		if($hasil == 0 && $kode_menu === 'modul-import-word'){
+			$col = ($tipe == 0) ? 'add' : 'edit';
+			$sql_fb = 'SELECT COUNT(*) AS hasil FROM user_akses WHERE user_akses.kode_menu="modul-import" AND user_akses.level="'.$level.'" AND user_akses.'.$col.'=1';
+			$hasil = $this->db->query($sql_fb)->row()->hasil;
+		}
 
 		return $hasil;
 	}
@@ -164,8 +174,21 @@ class Users_model extends CI_Model{
                     'peserta-kartu' => 'Cetak Kartu Login'
                 );
                 if($result_child->num_rows()>0){
+                    $rows_child = $result_child->result();
+                    $has_import_word = false;
+                    $has_import_old = false;
+                    foreach ($rows_child as $rc) {
+                        if ($rc->kode_menu === 'modul-import-word') $has_import_word = true;
+                        if ($rc->kode_menu === 'modul-import') $has_import_old = true;
+                    }
+                    if ($has_import_old && !$has_import_word) {
+                        $q_iw = $this->get_menu_detail('modul-import-word');
+                        if ($q_iw->num_rows() > 0) {
+                            $rows_child[] = $q_iw->row();
+                        }
+                    }
                     $menu_child = $menu_child.'<ul class="treeview-menu">';
-                    foreach ($result_child->result() as $child){
+                    foreach ($rows_child as $child){
                         if (in_array($child->kode_menu, $hidden_menus, true)) {
                             continue;
                         }

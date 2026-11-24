@@ -57,7 +57,7 @@
                 <div class="icon">
                     <i class="fa fa-sitemap"></i>
                 </div>
-                <a href="<?php echo site_url('manager/peserta_group'); ?>" class="small-box-footer">Kelola Grup <i class="fa fa-arrow-circle-right"></i></a>
+                <a href="<?php echo site_url('manager/peserta_daftar'); ?>" class="small-box-footer">Kelola Peserta &amp; Kelas <i class="fa fa-arrow-circle-right"></i></a>
             </div>
         </div>
         <div class="col-lg-3 col-xs-6">
@@ -214,34 +214,32 @@
         	<dl>
         		<dt>Data Modul</dt>
                 <dd>
-                	Kelompok Data Modul digunakan untuk menambah modul, topik, dan soal. Serta digunakan untuk mengatur file dengan memanfaatkan File Manager.
+                	Kelompok Data Modul digunakan untuk menambah modul, topik (mata pelajaran), dan bank soal, serta mengatur file media soal.
                 	<ol>
-                		<li>Topik</li>
+                		<li>Topik (Mata Pelajaran)</li>
                 		<li>Soal</li>
-                		<li>Import Soal Word</li>
-						<li>Import Soal Spreadsheet</li>
+                		<li>Import Soal Word (.docx / .doc / .zip)</li>
                 		<li>Daftar Soal</li>
                 		<li>File Manager</li>
                 	</ol>
                 </dd>
                 <dt>Data Peserta</dt>
                 <dd>
-                	Kelompok Data Peserta digunakan untuk mengatur Peserta, dan Group.
+                	Kelompok Data Peserta digunakan untuk mengatur Peserta &amp; Kelas (Group), import Excel, dan cetak kartu ujian.
                 	<ol>
-                		<li>Daftar Group</li>
-                		<li>Daftar Peserta</li>
+                		<li>Peserta &amp; Kelas</li>
                 		<li>Import Data Peserta</li>
-						<li>Cetak Kartu</li>
+						<li>Cetak Kartu Login</li>
 						<li>Reset Login</li>
                 	</ol>
+                </dd>
                 <dt>Data Tes</dt>
                 <dd>
-                	Kelompok Data Tes digunakan untuk mengatur Tes, mengevaluasi jawaban essay, dan melihat Hasil tes.
+                	Kelompok Data Tes digunakan untuk menyusun Master Jadwal &amp; Daftar Tes, koreksi jawaban esai, monitoring Hasil Tes, dan Token.
                 	<ol>
-                		<li>Tambah Tes</li>
-                		<li>Daftar Tes</li>
+                		<li>Daftar Tes &amp; Master Jadwal</li>
                 		<li>Evaluasi Tes</li>
-                		<li>Hasil tes</li>
+                		<li>Hasil Tes</li>
                 		<li>Token</li>
                 	</ol>
                 </dd>

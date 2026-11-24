@@ -52,7 +52,7 @@ class Tes_token extends Member_Controller {
     }
 
     function token(){
-        $token = substr(uniqid(), 7);
+        $token = strtoupper(substr(uniqid(), 7));
 
         $username = $this->access->get_username();
         $user_id = $this->users_model->get_login_info($username)->id;
@@ -61,8 +61,8 @@ class Tes_token extends Member_Controller {
 
         $i=1;
         while($i==1){
-        	if($this->cbt_tes_token_model->count_by_kolom('token_isi', $token)->row()->hasil==0){
-        		$data['token_isi'] = strtoupper($token);
+        	if($this->cbt_tes_token_model->count_by_isi($token)->row()->hasil==0){
+        		$data['token_isi'] = $token;
                 $data['token_user_id'] = $user_id;
                 $data['token_aktif'] = $aktif;
 				$data['token_tes_id'] = $tes_id;
@@ -72,7 +72,7 @@ class Tes_token extends Member_Controller {
         		$i=0;
         	}
 
-        	$token = substr(uniqid(), 7);
+        	$token = strtoupper(substr(uniqid(), 7));
         }
 
         $status['status'] = 1;
@@ -91,11 +91,11 @@ class Tes_token extends Member_Controller {
             $username = $this->access->get_username();
 			$user_id = $this->users_model->get_login_info($username)->id;
 			$aktif = $this->input->post('manual-aktif', TRUE);
-			$token = $this->input->post('manual-token', TRUE);
+			$token = strtoupper(trim((string)$this->input->post('manual-token', TRUE)));
 			$tes_id = $this->input->post('manual-tes', TRUE);
 			
-			if($this->cbt_tes_token_model->count_by_kolom('token_isi', $token)->row()->hasil==0){
-        		$data['token_isi'] = strtoupper($token);
+			if($this->cbt_tes_token_model->count_by_isi($token)->row()->hasil==0){
+        		$data['token_isi'] = $token;
                 $data['token_user_id'] = $user_id;
                 $data['token_aktif'] = $aktif;
 				$data['token_tes_id'] = $tes_id;

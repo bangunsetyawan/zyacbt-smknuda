@@ -28,11 +28,21 @@ class Tes_hasil_detail extends Tes_Controller {
         $data['url'] = $this->url;
 
         if(!empty($tesuser_id)){
+        	$tesuser_id = (int)$tesuser_id;
+        	$username = $this->access_tes->get_username();
+        	$curr_user = $this->cbt_user_model->get_by_kolom_limit('user_name', $username, 1)->row();
+
         	$query_testuser = $this->cbt_tes_user_model->get_by_kolom_limit('tesuser_id', $tesuser_id, 1);
         	if($query_testuser->num_rows()>0){
         		$query_testuser = $query_testuser->row();
+        		if(!$curr_user || (int)$query_testuser->tesuser_user_id !== (int)$curr_user->user_id){
+        			redirect('tes_dashboard');
+        		}
 
         		$query_test = $this->cbt_tes_model->get_by_kolom_limit('tes_id', $query_testuser->tesuser_tes_id, 1)->row();
+        		if((int)$query_test->tes_detail_to_users !== 1){
+        			redirect('tes_dashboard');
+        		}
         		$query_user = $this->cbt_user_model->get_by_kolom_limit('user_id', $query_testuser->tesuser_user_id, 1)->row();
 
         		$data['tes_user_id'] = $tesuser_id;
@@ -56,7 +66,14 @@ class Tes_hasil_detail extends Tes_Controller {
 
     function get_datatable(){
 		// variable initialization
-		$tesuser_id = $this->input->get('tes_user_id');
+		$tesuser_id = (int)$this->input->get('tes_user_id');
+		$username = $this->access_tes->get_username();
+		$curr_user = $this->cbt_user_model->get_by_kolom_limit('user_name', $username, 1)->row();
+		$q_tu = $this->cbt_tes_user_model->get_by_kolom_limit('tesuser_id', $tesuser_id, 1);
+		if($q_tu->num_rows() == 0 || !$curr_user || (int)$q_tu->row()->tesuser_user_id !== (int)$curr_user->user_id){
+			echo json_encode(array("sEcho" => 1, "iTotalRecords" => 0, "iTotalDisplayRecords" => 0, "aaData" => array()));
+			return;
+		}
 
 		$search = "";
 		$start = 0;

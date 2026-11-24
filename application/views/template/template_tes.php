@@ -56,7 +56,6 @@
     <script src="<?php echo base_url(); ?>public/plugins/datatables/extensions/Responsive/js/dataTables.responsive.min.js" type="text/javascript"></script>
 
     <script src="<?php echo base_url(); ?>public/plugins/pnotify/pnotify.custom.min.js" type="text/javascript"></script>
-    <script src="<?php echo base_url(); ?>public/app.js" type="text/javascript"></script>
     
     <!-- membuat gambar responsive pada soal -->
     <style type="text/css">

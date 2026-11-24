@@ -188,6 +188,7 @@ class Tes_dashboard extends Tes_Controller {
      */
     function konfirmasi_test($tes_id=null){
     	if(!empty($tes_id)){
+    		$tes_id = (int)$tes_id;
     		$query_tes = $this->cbt_tes_model->get_by_kolom_limit('tes_id', $tes_id, 1);
     		if($query_tes->num_rows()>0){
     			$query_tes = $query_tes->row();
@@ -195,10 +196,16 @@ class Tes_dashboard extends Tes_Controller {
     			$tanggal = new DateTime();
     			$tanggal_begin = new DateTime($query_tes->tes_begin_time);
     			$tanggal_tes = new DateTime($query_tes->tes_end_time);
-    			if($tanggal >= $tanggal_begin && $tanggal < $tanggal_tes){
-    				// Cek terlebih dahulu, apakah sudah pernah memulai tes
+    			if($tanggal >= $tanggal_begin && $tanggal <= $tanggal_tes){
+    				// Cek terlebih dahulu, apakah sudah pernah memulai tes & apakah tes memang untuk kelas siswa ini
     				$username = $this->access_tes->get_username();
-        			$user_id = $this->cbt_user_model->get_by_kolom_limit('user_name', $username, 1)->row()->user_id;
+        			$user_row = $this->cbt_user_model->get_by_kolom_limit('user_name', $username, 1)->row();
+        			$user_id = $user_row->user_id;
+        			$user_grup_id = (int)$user_row->user_grup_id;
+
+        			if($this->cbt_tesgrup_model->count_by_tes_and_group($query_tes->tes_id, $user_grup_id)->row()->hasil == 0){
+        				redirect('tes_dashboard');
+        			}
 
     				if($this->cbt_tes_user_model->count_by_user_tes($user_id, $query_tes->tes_id)->row()->hasil==0){
     					// Menampilkan konfirmasi Tes
@@ -254,15 +261,28 @@ class Tes_dashboard extends Tes_Controller {
 		$this->form_validation->set_rules('tes-id', 'Tes','required|strip_tags');
         
         if($this->form_validation->run() == TRUE){
-			$tes_id = $this->input->post('tes-id', TRUE);
-			$token = $this->input->post('token', TRUE);
+			$tes_id = (int)$this->input->post('tes-id', TRUE);
+			$token = strtoupper(trim((string)$this->input->post('token', TRUE)));
 			
 			$username = $this->access_tes->get_username();
-			$user_id = $this->cbt_user_model->get_by_kolom_limit('user_name', $username, 1)->row()->user_id;
+			$user_row = $this->cbt_user_model->get_by_kolom_limit('user_name', $username, 1)->row();
+			$user_id = $user_row->user_id;
+			$user_grup_id = (int)$user_row->user_grup_id;
 
 			$query_tes = $this->cbt_tes_model->get_by_kolom_limit('tes_id', $tes_id, 1);
 			if($query_tes->num_rows()>0){
 				$query_tes = $query_tes->row();
+				$now_dt = new DateTime();
+				$begin_dt = new DateTime($query_tes->tes_begin_time);
+				$end_dt = new DateTime($query_tes->tes_end_time);
+
+				// Pastikan tes adalah untuk kelas siswa ini dan sedang dalam rentang jadwal aktif
+				if($this->cbt_tesgrup_model->count_by_tes_and_group($tes_id, $user_grup_id)->row()->hasil == 0 || $now_dt < $begin_dt || $now_dt > $end_dt){
+					$status['status'] = 2;
+					$status['pesan'] = '';
+					echo json_encode($status);
+					return;
+				}
 				// Cek apakah tes sudah pernah dilakukan
 				if($this->cbt_tes_user_model->count_by_user_tes($user_id, $tes_id)->row()->hasil==0){
 					// Mengecek apakah token di isi sesuai ketentuan tes

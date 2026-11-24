@@ -519,7 +519,7 @@
 			<input type="hidden" name="tes-soal-id" id="tes-soal-id" value="<?php if(!empty($tes_soal_id)){ echo $tes_soal_id; } ?>">
 			<input type="hidden" name="tes-soal-nomor" id="tes-soal-nomor" value="<?php if(!empty($tes_soal_nomor)){ echo $tes_soal_nomor; } ?>">
 			<input type="hidden" name="tes-soal-jml" id="tes-soal-jml" value="<?php if(!empty($tes_soal_jml)){ echo $tes_soal_jml; } ?>">
-			<input type="hidden" name="tes-soal-ragu" id="tes-soal-ragu" value="<?php if(!empty($tes_ragu)){ echo $tes_ragu; } ?>">
+			<input type="hidden" name="tes-soal-ragu" id="tes-soal-ragu" value="<?php echo !empty($tes_ragu) ? 1 : 0; ?>">
 
 			<div class="cbt-question-card">
 				<div class="cbt-question-header">
