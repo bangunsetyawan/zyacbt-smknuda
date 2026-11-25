@@ -117,12 +117,12 @@
                 <div id="form-pesan"></div>
 
           		<div class="cbt-input-group has-feedback">
-            		<input type="text" id="username" inputmode="numeric" autocomplete="off" name="username" class="form-control" placeholder="Nomor Peserta / Username"/>
+            		<input type="text" id="username" autocomplete="off" name="username" class="form-control" placeholder="Nomor Peserta / Username"/>
             		<span class="glyphicon glyphicon-user form-control-feedback"></span>
           		</div>
 
           		<div class="cbt-input-group has-feedback">
-            		<input type="password" id="password" inputmode="numeric" autocomplete="off" name="password" class="form-control" placeholder="Password"/>
+            		<input type="password" id="password" autocomplete="off" name="password" class="form-control" placeholder="Password"/>
             		<span class="glyphicon glyphicon-lock form-control-feedback"></span>
           		</div>
 

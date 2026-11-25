@@ -388,9 +388,21 @@ class Tes_dashboard extends Tes_Controller {
 									$this->cbt_tes_soal_model->save_batch($insert_soal);
 
 									// Mengambil data soal pada test_log 
+									// PERBAIKAN 2026-11-25: hanya snapshot jawaban untuk soal yang BARU
+									// dimasukkan pada tset ini. Sebelumnya semua soal di topik diambil
+									// ulang tiap tset, sehingga bila beberapa tset memakai topik yang
+									// sama (mis. Mapel Campuran: PG+Esai+Isian), jawaban PG disimpan
+									// berulang dan menabrak PRIMARY KEY -> transaksi rollback diam-diam.
+									$soal_ids_tset = array();
+									foreach ($query_soal as $soal) {
+										$soal_ids_tset[] = $soal->soal_id;
+									}
 									$query_test_log = $this->cbt_tes_soal_model->get_by_testuser_select($tests_users_id, $subject_set->tset_topik_id, 'tessoal_id, soal_id, soal_tipe')->result();
 									$insert_jawaban_all = array();
 									foreach ($query_test_log as $test_log) {
+										if(!in_array($test_log->soal_id, $soal_ids_tset)){
+											continue;
+										}
 										// Jika tipe soal pilihan ganda
 										if($test_log->soal_tipe==1){
 											// Jika jawaban diacak 
@@ -438,6 +450,15 @@ class Tes_dashboard extends Tes_Controller {
 							}
 							// Menutup transaction mysql
 							$this->db->trans_complete();
+							// PERBAIKAN 2026-11-25: laporkan gagal bila transaksi rollback,
+							// jangan klaim berhasil padahal tidak ada data tersimpan.
+							if($this->db->trans_status() === FALSE){
+								$status['status'] = 0;
+								$status['pesan'] = 'Gagal membuat sesi tes, silahkan coba lagi.';
+								echo json_encode($status);
+								return;
+							}
+
 
 							$status['status'] = 1;
 							$status['tes_id'] = $tes_id;

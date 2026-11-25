@@ -70,22 +70,23 @@
         }
 
         /*
-         * Ukuran tiap kartu: 64mm x 37mm (pas masuk wadah ID Card B2 / B3 tanpa dilipat)
-         * Grid 3 kolom x 7 baris = 21 kartu/lembar A4 (lebar 3*64 + 2*2 = 196mm <= 198mm, tinggi 7*37 + 6*1.8 = 269.8mm <= 285mm)
-         * Pada F4 otomatis muat 3 kolom x 8 baris = 24 kartu/lembar (tinggi 8*37 + 7*1.8 = 308.6mm <= 318mm)
+         * Ukuran tiap kartu: 92mm x 64mm (besar, mudah dibaca)
+         * Grid 2 kolom x 4 baris = 8 kartu/lembar A4 (lebar 2*92 + 1*6 = 190mm <= 198mm,
+         * tinggi 4*64 + 3*6 = 274mm <= 285mm). F4 juga 8 kartu/lembar (2x4).
+         * Hitam-putih saja.
          */
         .slip-grid {
             display: grid;
-            grid-template-columns: repeat(3, 64mm);
+            grid-template-columns: repeat(2, 92mm);
             justify-content: center;
-            gap: 1.8mm 2mm;
+            gap: 6mm 6mm;
         }
 
         .slip-cut {
-            width: 64mm;
-            height: 37mm;
+            width: 92mm;
+            height: 64mm;
             border: 1px dashed #666;
-            padding: 1.3mm;
+            padding: 0;
             break-inside: avoid;
             page-break-inside: avoid;
             background: #fff;
@@ -94,76 +95,98 @@
         .slip-box {
             width: 100%;
             height: 100%;
-            border: 1.2px solid #000;
-            padding: 1.6mm 2.2mm;
+            border: 1.5px solid #000;
+            border-radius: 2mm;
+            padding: 3mm 3.5mm;
             background: #fff;
             color: #000;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
+            position: relative;
             overflow: hidden;
         }
 
         .slip-head {
             border-bottom: 1px solid #000;
-            padding-bottom: 0.8mm;
+            padding-bottom: 1.5mm;
+            margin-bottom: 2mm;
             text-align: center;
-            line-height: 1.15;
+            line-height: 1.2;
         }
         .slip-title {
-            font-size: 9.5px;
+            font-size: 11pt;
             font-weight: 800;
-            letter-spacing: 0.4px;
+            letter-spacing: 0.5px;
             text-transform: uppercase;
         }
         .slip-sub {
-            font-size: 8px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            font-size: 8pt;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
         }
 
-        .slip-identitas {
-            line-height: 1.22;
-            margin-top: 0.6mm;
-        }
         .slip-nama {
-            font-size: 9.8px;
+            font-size: 13pt;
             font-weight: 700;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .slip-kelas {
-            font-size: 8.5px;
+            line-height: 1.15;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
+        /* Baris label : nilai — titik dua sejajar lurus */
         .slip-cred {
             width: 100%;
             border-collapse: collapse;
-            border-top: 1px dotted #000;
-            font-size: 9.5px;
+            margin-top: 2mm;
+            font-size: 9pt;
         }
         .slip-cred td {
-            padding: 0.6mm 0 0 0;
-            line-height: 1.18;
-            vertical-align: middle;
+            padding: 1.2mm 0 0 0;
+            line-height: 1.2;
+            vertical-align: baseline;
         }
         .slip-cred td.lbl {
-            width: 34px;
+            width: 22mm;
             white-space: nowrap;
         }
         .slip-cred td.sep {
-            width: 7px;
+            width: 4mm;
         }
         .cred-mono {
             font-family: "Courier New", Courier, monospace;
             font-weight: 700;
-            font-size: 11px;
-            letter-spacing: 0.4px;
+            font-size: 14pt;
+            letter-spacing: 1px;
+        }
+
+        .slip-qr {
+            position: absolute;
+            right: 3.5mm;
+            bottom: 7mm;
+            width: 16mm;
+            text-align: center;
+        }
+        .slip-qr img {
+            width: 16mm;
+            height: 16mm;
+        }
+        .slip-qr .cap {
+            font-size: 6.5pt;
+            margin-top: 0.3mm;
+        }
+
+        .slip-url {
+            position: absolute;
+            left: 3.5mm;
+            right: 3.5mm;
+            bottom: 2mm;
+            border-top: 1px solid #000;
+            padding-top: 1.2mm;
+            text-align: center;
+            font-size: 7.5pt;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+            line-height: 1.3;
         }
 
         .empty-state {
@@ -205,8 +228,8 @@
         <div class="info">
             Kartu Login Ujian &mdash; <strong><?php echo $label_filter; ?></strong>
             &bull; Total: <strong><?php echo count($peserta_list); ?> kartu</strong>
-            &bull; Ukuran: <strong>64 &times; 37 mm (B2/B3)</strong>
-            &bull; <strong><?php echo ($kertas === 'f4') ? '24 kartu/F4 (3&times;8)' : '21 kartu/A4 (3&times;7)'; ?></strong>
+            &bull; Ukuran: <strong>92 &times; 64 mm</strong>
+            &bull; <strong>8 kartu/A4 (2&times;4)</strong>
         </div>
         <div class="actions">
             <?php if(!empty($peserta_list)){ ?>
@@ -233,27 +256,32 @@
                     <div class="slip-cut">
                         <div class="slip-box">
                             <div class="slip-head">
-                                <div class="slip-title">KARTU LOGIN UJIAN</div>
-                                <?php if($sub_header !== ''){ ?>
-                                    <div class="slip-sub"><?php echo html_escape($sub_header); ?></div>
-                                <?php } ?>
+                                <div class="slip-title"><?php echo html_escape($sub_header); ?></div>
+                                <div class="slip-sub">Kartu Login Ujian</div>
                             </div>
-                            <div class="slip-identitas">
-                                <div class="slip-nama"><?php echo html_escape(stripslashes($p->user_firstname)); ?></div>
-                                <div class="slip-kelas">Kelas: <?php echo $kelas_info; ?></div>
-                            </div>
+                            <div class="slip-nama"><?php echo html_escape(stripslashes($p->user_firstname)); ?></div>
                             <table class="slip-cred">
                                 <tr>
-                                    <td class="lbl">User</td>
+                                    <td class="lbl">Kelas</td>
+                                    <td class="sep">:</td>
+                                    <td><?php echo $kelas_info; ?></td>
+                                </tr>
+                                <tr>
+                                    <td class="lbl">Username</td>
                                     <td class="sep">:</td>
                                     <td><span class="cred-mono"><?php echo html_escape($p->user_name); ?></span></td>
                                 </tr>
                                 <tr>
-                                    <td class="lbl">Pass</td>
+                                    <td class="lbl">Password</td>
                                     <td class="sep">:</td>
                                     <td><span class="cred-mono"><?php echo html_escape($p->user_password); ?></span></td>
                                 </tr>
                             </table>
+                            <div class="slip-qr">
+                                <img src="<?php echo base_url('public/images/qr-login.png'); ?>" alt="QR Login">
+                                <div class="cap">Scan untuk login</div>
+                            </div>
+                            <div class="slip-url">Akses: siakanuda.com atau 10.10.10.10 &bull; wifi sekolah</div>
                         </div>
                     </div>
                 <?php } ?>
