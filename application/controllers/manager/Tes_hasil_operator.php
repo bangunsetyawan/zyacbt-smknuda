@@ -23,9 +23,14 @@ class Tes_hasil_operator extends Member_Controller {
         $data['kode_menu'] = $this->kode_menu;
         $data['url'] = $this->url;
 
+        $is_admin = ($this->access->get_level() === 'admin');
+
         // 1. Dropdown Ruang (dari cbt_user.user_detail / Keterangan)
-        // Default kosong agar layar pengawas bersih sebelum memilih ruang
+        // Default kosong agar layar pengawas & admin bersih sebelum memilih ruang
         $select_ruang = '<option value="" selected="selected">-- Pilih Ruang Ujian --</option>';
+        if($is_admin){
+            $select_ruang .= '<option value="semua_masalah">Semua Ruang (Khusus Merah &amp; Kuning)</option>';
+        }
         $q_ruang = $this->db->select('user_detail, COUNT(*) AS jml')
                             ->from('cbt_user')
                             ->where('user_detail IS NOT NULL', null, false)
@@ -81,6 +86,24 @@ class Tes_hasil_operator extends Member_Controller {
             return;
         }
 
+        $is_admin = ($this->access->get_level() === 'admin');
+        if($ruang === 'semua_masalah'){
+            if(!$is_admin){
+                echo json_encode(array(
+                    'status' => 1,
+                    'empty_room' => true,
+                    'waktu_server' => date('H:i:s'),
+                    'summary' => array('total' => 0, 'merah' => 0, 'kuning' => 0, 'hijau' => 0, 'belum' => 0, 'masalah' => 0),
+                    'items' => array()
+                ));
+                return;
+            }
+            // Mode lintas-ruang admin: wajib hanya Merah & Kuning (kecuali sedang mencari nama/NISN spesifik)
+            if($search === ''){
+                $filter_warna = 'masalah';
+            }
+        }
+
         // Ambil daftar siswa sesuai filter ruang
         $this->db->select('u.user_id, u.user_name, u.user_firstname, u.user_detail, u.user_ip, u.user_login, u.user_login_date, g.grup_nama')
                  ->from('cbt_user u')
@@ -88,7 +111,7 @@ class Tes_hasil_operator extends Member_Controller {
 
         if($ruang === '__tanpa_ruang__'){
             $this->db->where("(u.user_detail IS NULL OR TRIM(u.user_detail) = '')", null, false);
-        }elseif($ruang !== 'semua'){
+        }elseif($ruang !== 'semua' && $ruang !== 'semua_masalah'){
             $this->db->where('u.user_detail', $ruang);
         }
         if($group !== '' && $group !== 'semua' && is_numeric($group)){
@@ -100,7 +123,7 @@ class Tes_hasil_operator extends Member_Controller {
         }
 
         $this->db->order_by('u.user_firstname', 'ASC')
-                 ->limit(300);
+                 ->limit(500);
         $users = $this->db->get()->result();
 
         if(empty($users)){

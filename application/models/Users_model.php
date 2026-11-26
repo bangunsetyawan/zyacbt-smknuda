@@ -78,6 +78,9 @@ class Users_model extends CI_Model{
 			$sql_fb = 'SELECT COUNT(*) AS hasil FROM user_akses WHERE user_akses.kode_menu="peserta-daftar" AND user_akses.level=?';
 			$hasil = $this->db->query($sql_fb, array((string)$level))->row()->hasil;
 		}
+		if($hasil == 0 && $kode_menu === 'tes-hasil-operator' && (string)$level === 'admin'){
+			$hasil = 1;
+		}
 
 		return $hasil;
 	}

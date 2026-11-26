@@ -271,7 +271,14 @@
     }
 
     function set_filter_warna(warna){
-        if($('#filter-ruang').val() === ''){
+        var ruang = $('#filter-ruang').val();
+        if(ruang === ''){
+            return;
+        }
+        if(ruang === 'semua_masalah' && (warna === 'hijau' || warna === 'belum')){
+            if(typeof notify_info === 'function'){
+                notify_info('Mode "Semua Ruang" hanya menampilkan kartu Merah & Kuning agar ringan. Pilih satu ruang tertentu untuk melihat Hijau/Belum.');
+            }
             return;
         }
         var cur = $('#filter-warna').val();
