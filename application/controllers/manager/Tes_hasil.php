@@ -104,15 +104,20 @@ class Tes_hasil extends Member_Controller {
             	$status['status'] = 1;
             	$status['pesan'] = 'Tes berhasil dibuka, user bisa mengerjakan kembali';
             }else if($pilihan=='waktu'){
+            	$waktu = intval($this->input->post('waktu-menit', TRUE));
+            	if($waktu <= 0){
+            		$status['status'] = 0;
+            		$status['pesan'] = 'Jumlah tambahan waktu harus lebih dari 0 menit.';
+            		echo json_encode($status);
+            		return;
+            	}
             	foreach( $tesuser_id as $kunci => $isi ) {
                     if($isi=="on"){
-                    	$waktu = intval($this->input->post('waktu-menit', TRUE));
-
             			$this->cbt_tes_user_model->update_menit($kunci, $waktu);
                     }
                 }
             	$status['status'] = 1;
-            	$status['pesan'] = 'Waktu Tes berhasil ditambah';
+            	$status['pesan'] = 'Waktu Tes berhasil ditambah (+'.$waktu.' menit) dan sesi peserta dibuka kembali';
             }
 
         }else{
@@ -241,7 +246,7 @@ class Tes_hasil extends Member_Controller {
 			}
 			
 			if(empty($temp->tesuser_status)){
-				$record[] = 'Belum memulai';
+				$record[] = '<span class="label label-default">Belum memulai</span>';
 			}else{
 				if($temp->tesuser_status==1){
 					$tanggal = new DateTime();
@@ -249,14 +254,14 @@ class Tes_hasil extends Member_Controller {
 					$tanggal_tes = new DateTime($temp->tesuser_creation_time);
 					$tanggal_tes->modify('+'.$temp->tes_duration_time.' minutes');
 					if($tanggal>$tanggal_tes){
-						$record[] = 'Selesai';
+						$record[] = '<span class="label label-success"><i class="fa fa-check"></i> Selesai (Waktu Habis)</span>';
 					}else{
 						$tanggal = $tanggal_tes->diff($tanggal);
 						$menit_sisa = ($tanggal->h*60)+($tanggal->i);
-						$record[] = 'Berjalan (-'.$menit_sisa.' menit)';
+						$record[] = '<span class="label label-warning"><i class="fa fa-clock-o"></i> Berjalan (Sisa '.$menit_sisa.' mnt)</span>';
 					}
 				}else{
-					$record[] = 'Selesai';
+					$record[] = '<span class="label label-success"><i class="fa fa-check"></i> Selesai</span>';
 				}
 			}
 			

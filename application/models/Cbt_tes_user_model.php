@@ -25,7 +25,7 @@ class Cbt_tes_user_model extends CI_Model{
     }
 
     function update_menit($tesuser_id, $waktu){
-        $sql = 'UPDATE cbt_tes_user SET tesuser_creation_time=TIMESTAMPADD(MINUTE, ?, tesuser_creation_time) WHERE tesuser_id=?';
+        $sql = 'UPDATE cbt_tes_user SET tesuser_creation_time=TIMESTAMPADD(MINUTE, ?, tesuser_creation_time), tesuser_status=1 WHERE tesuser_id=?';
         $this->db->query($sql, array((int)$waktu, (int)$tesuser_id));
     }
     

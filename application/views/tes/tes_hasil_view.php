@@ -212,24 +212,52 @@
             $("#modal-proses").modal('hide');
         });
 
+        function count_checked_peserta(){
+            return $('#table-hasil tbody input[type="checkbox"]:checked').length;
+        }
+
         $('#btn-edit-hapus').click(function(){
-            if(confirm('Yakin ingin menghapus hasil tes peserta yang dipilih? Data nilai yang dihapus tidak dapat dikembalikan.')){
+            var jml = count_checked_peserta();
+            if(jml === 0){
+                notify_error('Silahkan centang minimal 1 peserta terlebih dahulu.');
+                return;
+            }
+            if(confirm('Yakin ingin MENGHAPUS PERMANEN hasil tes untuk ' + jml + ' peserta yang dipilih?\n\nData nilai & jawaban yang dihapus tidak dapat dikembalikan (peserta dapat mengulang ujian dari awal).')){
                 $('#edit-pilihan').val('hapus');
                 $('#form-edit').submit();
             }
         });
 
         $('#btn-edit-hentikan').click(function(){
-           $('#edit-pilihan').val('hentikan');
-            $('#form-edit').submit(); 
+            var jml = count_checked_peserta();
+            if(jml === 0){
+                notify_error('Silahkan centang minimal 1 peserta terlebih dahulu.');
+                return;
+            }
+            if(confirm('Hentikan dan kunci sesi ujian untuk ' + jml + ' peserta yang dipilih?')){
+                $('#edit-pilihan').val('hentikan');
+                $('#form-edit').submit();
+            }
         });
 
         $('#btn-edit-buka-tes').click(function(){
-            $('#edit-pilihan').val('buka');
-            $('#form-edit').submit();
+            var jml = count_checked_peserta();
+            if(jml === 0){
+                notify_error('Silahkan centang minimal 1 peserta terlebih dahulu.');
+                return;
+            }
+            if(confirm('Buka kembali sesi ujian untuk ' + jml + ' peserta yang dipilih agar bisa melanjutkan pengerjaan?')){
+                $('#edit-pilihan').val('buka');
+                $('#form-edit').submit();
+            }
         });
 
         $('#btn-edit-waktu').click(function(){
+            var jml = count_checked_peserta();
+            if(jml === 0){
+                notify_error('Silahkan centang minimal 1 peserta terlebih dahulu.');
+                return;
+            }
             $('#edit-pilihan').val('waktu');
             $('#waktu-menit').val('10');
             $("#modal-waktu").modal('show');
