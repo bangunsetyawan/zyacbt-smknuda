@@ -450,10 +450,10 @@ class Modul_topik extends Member_Controller {
 	            		$this->load->helper('directory');
 						$this->load->helper('file');
 	            		
-	            		$folder = $this->config->item('upload_path').'/topik_'.$kunci;
+	            		$folder = $this->config->item('upload_path').'/topik_'.(int)$kunci;
 	            		if(is_dir($folder)){
-	            			delete_files($folder, TRUE);
-	            			rmdir($folder);
+	            			@delete_files($folder, TRUE);
+	            			@rmdir($folder);
 	            		}
 	            	}
             	}
@@ -499,10 +499,10 @@ class Modul_topik extends Member_Controller {
             		$this->load->helper('directory');
 					$this->load->helper('file');
             		
-            		$folder = $this->config->item('upload_path').'/topik_'.$id;
+            		$folder = $this->config->item('upload_path').'/topik_'.(int)$id;
             		if(is_dir($folder)){
-            			delete_files($folder, TRUE);
-            			rmdir($folder);
+            			@delete_files($folder, TRUE);
+            			@rmdir($folder);
             		}
 
 					$status['status'] = 1;

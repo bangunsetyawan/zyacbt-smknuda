@@ -78,6 +78,33 @@
                     </div>
                 </div>
         </div>
+        <div class="col-md-6">
+                <div class="box box-warning">
+                    <div class="box-header with-border">
+    					<div class="box-title"><i class="fa fa-broom"></i> Pemeliharaan Media &amp; Reset Data Dummy</div>
+                    </div>
+
+                    <div class="box-body">
+                        <div id="form-pesan-dummy"></div>
+                        <p><strong>1. Bersihkan Folder Media Yatim (<code>uploads/topik_X</code>):</strong> Menghapus folder gambar/audio dari topik yang sudah dihapus agar penyimpanan server tetap bersih.</p>
+                        <button type="button" class="btn btn-info btn-sm" id="btn-clean-orphan"><i class="fa fa-folder-open"></i> Bersihkan Folder Media Yatim</button>
+                        <hr style="margin:12px 0;">
+                        <p><strong>2. Reset Data Dummy / Uji Coba (Menjelang Ujian Real):</strong></p>
+                        <div class="form-group" style="margin-bottom:8px;">
+                            <select id="mode-reset-dummy" class="form-control input-sm">
+                                <option value="peserta_999">Hapus Peserta Dummy (NISN 999...) &amp; Hasil Tesnya Saja</option>
+                                <option value="full_clean">Reset Total Semua Data Dummy (Peserta, Kelas, Jadwal, Hasil &amp; Soal Uji Coba)</option>
+                            </select>
+                        </div>
+                        <div class="input-group input-group-sm">
+                            <input type="text" id="input-konfirmasi-dummy" class="form-control" placeholder='Ketik: RESET DUMMY untuk konfirmasi' autocomplete="off">
+                            <span class="input-group-btn">
+                                <button type="button" class="btn btn-danger" id="btn-reset-dummy"><i class="fa fa-trash"></i> Jalankan Reset</button>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+        </div>
 	</div>
 </section><!-- /.content -->
 
@@ -101,6 +128,51 @@
 				}
 				$("#modal-proses").modal('hide');
 			});
+        });
+
+        $('#btn-clean-orphan').click(function(){
+            $("#modal-proses").modal('show');
+            $.getJSON('<?php echo site_url().'/'.$url; ?>/clean_orphan_uploads', function(res){
+                $("#modal-proses").modal('hide');
+                if(res.status == 1){
+                    $('#form-pesan-dummy').html('<div class="alert alert-success" style="padding:8px 12px;margin-bottom:10px;">'+res.pesan+'</div>');
+                }else{
+                    $('#form-pesan-dummy').html('<div class="alert alert-danger" style="padding:8px 12px;margin-bottom:10px;">'+res.pesan+'</div>');
+                }
+            });
+        });
+
+        $('#btn-reset-dummy').click(function(){
+            var konf = $.trim($('#input-konfirmasi-dummy').val());
+            var mode = $('#mode-reset-dummy').val();
+            if(konf.toUpperCase() !== 'RESET DUMMY'){
+                $('#form-pesan-dummy').html('<div class="alert alert-warning" style="padding:8px 12px;margin-bottom:10px;">Silahkan ketik <b>RESET DUMMY</b> terlebih dahulu pada kotak konfirmasi.</div>');
+                return;
+            }
+            var labelMode = $('#mode-reset-dummy option:selected').text();
+            if(!confirm('Yakin ingin menjalankan: ' + labelMode + '?\n\nPastikan Anda sudah melakukan Backup Database bila diperlukan.')){
+                return;
+            }
+            $("#modal-proses").modal('show');
+            $.ajax({
+                url: '<?php echo site_url().'/'.$url; ?>/reset_data_dummy',
+                type: 'POST',
+                data: {konfirmasi: konf, mode: mode},
+                dataType: 'json',
+                success: function(res){
+                    $("#modal-proses").modal('hide');
+                    if(res.status == 1){
+                        $('#input-konfirmasi-dummy').val('');
+                        $('#form-pesan-dummy').html('<div class="alert alert-success" style="padding:8px 12px;margin-bottom:10px;">'+res.pesan+'</div>');
+                    }else{
+                        $('#form-pesan-dummy').html('<div class="alert alert-danger" style="padding:8px 12px;margin-bottom:10px;">'+res.pesan+'</div>');
+                    }
+                },
+                error: function(){
+                    $("#modal-proses").modal('hide');
+                    $('#form-pesan-dummy').html('<div class="alert alert-danger" style="padding:8px 12px;margin-bottom:10px;">Terjadi kesalahan saat menghubungi server.</div>');
+                }
+            });
         });
     });
 </script>
