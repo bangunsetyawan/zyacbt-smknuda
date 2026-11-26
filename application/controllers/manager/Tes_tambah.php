@@ -78,6 +78,7 @@ class Tes_tambah extends Member_Controller {
         $data['select_group'] = $select_g;
 
         // Daftar modul (urutkan Modul Aktif di paling atas!)
+        $this->cbt_modul_model->ensure_single_aktif();
         $moduls = $this->db->select('modul_id, modul_nama, modul_aktif')
                            ->from('cbt_modul')
                            ->order_by('modul_aktif', 'DESC')

@@ -140,12 +140,13 @@ class Modul_topik extends Member_Controller {
             return;
         }
         $row = $existing->row();
-        if((int)$row->modul_aktif === 1){
-            echo json_encode(array('status' => 0, 'pesan' => 'Modul "'.$row->modul_nama.'" sudah menjadi Modul Aktif saat ini.'));
+        $jml_aktif = (int)$this->cbt_modul_model->count_aktif()->row()->hasil;
+        if((int)$row->modul_aktif === 1 && $jml_aktif === 1){
+            echo json_encode(array('status' => 0, 'pesan' => 'Modul "'.$row->modul_nama.'" sudah menjadi satu-satunya Modul Aktif saat ini.'));
             return;
         }
         $this->cbt_modul_model->set_single_aktif($id);
-        echo json_encode(array('status' => 1, 'modul_id' => $id, 'pesan' => 'Modul "'.$row->modul_nama.'" kini aktif (modul lainnya otomatis dipindahkan ke Arsip).'));
+        echo json_encode(array('status' => 1, 'modul_id' => $id, 'pesan' => 'Modul "'.$row->modul_nama.'" kini menjadi Modul Aktif (modul lainnya otomatis dipindahkan ke Arsip).'));
     }
 
     function hapus_modul(){
@@ -156,18 +157,19 @@ class Modul_topik extends Member_Controller {
             return;
         }
         $row = $existing->row();
+        if((int)$row->modul_aktif === 1){
+            echo json_encode(array('status' => 0, 'pesan' => 'Modul yang sedang Aktif tidak dapat dihapus. Aktifkan modul lain terlebih dahulu sebelum menghapus modul ini.'));
+            return;
+        }
         $jml_topik = (int)$this->cbt_topik_model->count_by_kolom('topik_modul_id', $id)->row()->hasil;
         if($jml_topik > 0){
-            echo json_encode(array('status' => 0, 'pesan' => 'Modul masih berisi '.$jml_topik.' Topik. Gunakan tombol "Arsipkan" agar bank soal tetap aman, atau kosongkan topiknya terlebih dahulu.'));
+            echo json_encode(array('status' => 0, 'pesan' => 'Modul masih berisi '.$jml_topik.' Topik. Kosongkan topiknya terlebih dahulu jika ingin menghapus modul ini.'));
             return;
         }
         if((int)$this->cbt_modul_model->count_all()->row()->hasil <= 1){
             echo json_encode(array('status' => 0, 'pesan' => 'Minimal harus ada 1 Modul tersisa di sistem.'));
             return;
         }
-        if((int)$row->modul_aktif === 1 && (int)$this->cbt_modul_model->count_aktif()->row()->hasil <= 1){
-            echo json_encode(array('status' => 0, 'pesan' => 'Tidak bisa menghapus satu-satunya Modul yang aktif.'));
-            return;
         }
         $this->cbt_modul_model->delete('modul_id', $id);
         echo json_encode(array('status' => 1, 'pesan' => 'Modul kosong "'.$row->modul_nama.'" berhasil dihapus.'));

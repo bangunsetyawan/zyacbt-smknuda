@@ -378,9 +378,14 @@
                         var btnToggle = (m.modul_aktif == 1)
                             ? '<button type="button" class="btn btn-default btn-xs" disabled title="Modul ini sedang aktif digunakan"><i class="fa fa-check-circle text-success"></i> Aktif</button>'
                             : '<button type="button" class="btn btn-success btn-xs" onclick="toggle_status_modul('+m.modul_id+')" title="Jadikan modul aktif (modul lain otomatis diarsipkan)"><i class="fa fa-check-circle"></i> Jadikan Aktif</button>';
-                        var btnHapus = (m.jml_topik == 0)
-                            ? ' <button type="button" class="btn btn-danger btn-xs" onclick="hapus_modul_kosong('+m.modul_id+', \''+escape_html(m.modul_nama).replace(/'/g, "\\'")+'\')" title="Hapus modul kosong"><i class="fa fa-trash"></i></button>'
-                            : ' <button type="button" class="btn btn-default btn-xs" disabled title="Kosongkan topik dulu atau gunakan Arsipkan"><i class="fa fa-lock"></i></button>';
+                        var btnHapus = '';
+                        if(m.modul_aktif == 1){
+                            btnHapus = ' <button type="button" class="btn btn-default btn-xs" disabled title="Modul yang sedang Aktif dikunci dari penghapusan"><i class="fa fa-lock"></i></button>';
+                        }else if(m.jml_topik == 0){
+                            btnHapus = ' <button type="button" class="btn btn-danger btn-xs" onclick="hapus_modul_kosong('+m.modul_id+', \''+escape_html(m.modul_nama).replace(/'/g, "\\'")+'\')" title="Hapus modul arsip kosong"><i class="fa fa-trash"></i></button>';
+                        }else{
+                            btnHapus = ' <button type="button" class="btn btn-default btn-xs" disabled title="Modul masih berisi '+m.jml_topik+' topik (kosongkan topik dulu untuk menghapus)"><i class="fa fa-lock"></i></button>';
+                        }
 
                         html += '<tr>'
                             + '<td class="text-center">'+(idx+1)+'</td>'

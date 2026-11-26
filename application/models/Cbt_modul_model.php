@@ -48,6 +48,7 @@ class Cbt_modul_model extends CI_Model{
     }
 
     function get_modul(){
+        $this->ensure_single_aktif();
         $this->db->where('(modul_aktif=1)')
                  ->from($this->table)
                  ->order_by('modul_id', 'DESC');
@@ -56,11 +57,12 @@ class Cbt_modul_model extends CI_Model{
 
     function get_all(){
         $this->db->from($this->table)
-                 ->order_by('modul_id', 'ALL');
+                 ->order_by('modul_id', 'DESC');
         return $this->db->get();
     }
 
     function get_all_ordered(){
+        $this->ensure_single_aktif();
         $this->db->from($this->table)
                  ->order_by('modul_aktif', 'DESC')
                  ->order_by('modul_id', 'DESC');
@@ -74,10 +76,32 @@ class Cbt_modul_model extends CI_Model{
         return $this->db->get();
     }
 
+    function ensure_single_aktif(){
+        $aktif_rows = $this->db->select('modul_id')
+                               ->from($this->table)
+                               ->where('modul_aktif', 1)
+                               ->order_by('modul_id', 'DESC')
+                               ->get()->result();
+        $cnt = count($aktif_rows);
+        if($cnt > 1){
+            $keep_id = (int)$aktif_rows[0]->modul_id;
+            $this->set_single_aktif($keep_id);
+        }elseif($cnt === 0){
+            $latest = $this->db->select('modul_id')
+                               ->from($this->table)
+                               ->order_by('modul_id', 'DESC')
+                               ->limit(1)
+                               ->get()->row();
+            if($latest){
+                $this->set_single_aktif((int)$latest->modul_id);
+            }
+        }
+    }
+
     function set_single_aktif($modul_id){
         $this->db->trans_start();
         $this->db->update($this->table, array('modul_aktif' => 0));
-        $this->db->where('modul_id', $modul_id)
+        $this->db->where('modul_id', (int)$modul_id)
                  ->update($this->table, array('modul_aktif' => 1));
         $this->db->trans_complete();
         return $this->db->trans_status();

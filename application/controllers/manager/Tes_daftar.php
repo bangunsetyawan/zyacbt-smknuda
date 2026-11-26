@@ -57,9 +57,10 @@ class Tes_daftar extends Member_Controller {
         $data['counts'] = $this->_get_status_counts();
         $data['groups'] = $this->cbt_user_grup_model->get_group()->result();
 
+        $this->cbt_modul_model->ensure_single_aktif();
         $active_modul = $this->db->select('modul_id, modul_nama')
                                  ->from('cbt_modul')
-                                 ->order_by('modul_aktif', 'DESC')
+                                 ->where('modul_aktif', 1)
                                  ->order_by('modul_id', 'DESC')
                                  ->limit(1)
                                  ->get()->row();
