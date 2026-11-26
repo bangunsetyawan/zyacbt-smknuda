@@ -145,12 +145,15 @@ class Access_tes{
 		}
 		try {
 			$prev_tag = '';
-			$q_user = $this->CI->db->select('user_ip')
+			$user_ruang = '';
+			$q_user = $this->CI->db->select('user_ip, user_detail')
 			                       ->where('user_name', $username)
 			                       ->limit(1)
 			                       ->get('cbt_user');
 			if($q_user && $q_user->num_rows() > 0){
-				$prev_tag = trim((string)$q_user->row()->user_ip);
+				$u_row = $q_user->row();
+				$prev_tag = trim((string)$u_row->user_ip);
+				$user_ruang = trim((string)$u_row->user_detail);
 			}
 
 			// Update cbt_user.user_ip jika berubah atau masih kosong
@@ -169,10 +172,17 @@ class Access_tes{
 			// Catat ke user_log jika:
 			// 1) Akses melalui jalur PUB (paket data / internet) pada saat LOGIN / MULAI_TES, atau
 			// 2) Terjadi perpindahan jalur (LAN -> PUB atau PUB -> LAN), atau
-			// 3) Selama SIMPAN_JAWABAN di jalur PUB nhưng IP berubah
+			// 3) Selama SIMPAN_JAWABAN di jalur PUB dengan IP berubah
 			$should_log = false;
 			$log_msg = '';
-			$ket_suffix = ($extra_ket !== '') ? ' ('.$extra_ket.')' : '';
+			$ket_parts = array();
+			if($user_ruang !== ''){
+				$ket_parts[] = 'Ruang: '.$user_ruang;
+			}
+			if($extra_ket !== ''){
+				$ket_parts[] = $extra_ket;
+			}
+			$ket_suffix = !empty($ket_parts) ? ' ('.implode(', ', $ket_parts).')' : '';
 
 			if($net['mode'] === 'PUB'){
 				if($prev_mode === 'LAN'){

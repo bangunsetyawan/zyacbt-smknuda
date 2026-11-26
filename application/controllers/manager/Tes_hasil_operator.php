@@ -24,7 +24,8 @@ class Tes_hasil_operator extends Member_Controller {
         $data['url'] = $this->url;
 
         // 1. Dropdown Ruang (dari cbt_user.user_detail / Keterangan)
-        $select_ruang = '<option value="semua">-- Semua Ruang --</option>';
+        // Default kosong agar layar pengawas bersih sebelum memilih ruang
+        $select_ruang = '<option value="" selected="selected">-- Pilih Ruang Ujian --</option>';
         $q_ruang = $this->db->select('user_detail, COUNT(*) AS jml')
                             ->from('cbt_user')
                             ->where('user_detail IS NOT NULL', null, false)
@@ -39,6 +40,11 @@ class Tes_hasil_operator extends Member_Controller {
                     $select_ruang .= '<option value="'.html_escape($r_val).'">'.html_escape($r_val).' ('.(int)$r->jml.' siswa)</option>';
                 }
             }
+        }
+        $jml_tanpa_ruang = (int)$this->db->where("(user_detail IS NULL OR TRIM(user_detail) = '')", null, false)
+                                         ->count_all_results('cbt_user');
+        if($jml_tanpa_ruang > 0){
+            $select_ruang .= '<option value="__tanpa_ruang__">[Belum Diatur Ruang] ('.$jml_tanpa_ruang.' siswa)</option>';
         }
         $data['select_ruang'] = $select_ruang;
         
@@ -57,15 +63,32 @@ class Tes_hasil_operator extends Member_Controller {
         $ruang  = trim((string)$this->input->get('ruang', TRUE));
         $group  = trim((string)$this->input->get('group', TRUE));
         $tes_id = trim((string)$this->input->get('tes', TRUE));
-        $filter_warna = trim((string)$this->input->get('warna', TRUE)); // semua | merah | kuning | hijau | belum
+        $filter_warna = trim((string)$this->input->get('warna', TRUE)); // masalah | semua | merah | kuning | hijau | belum
+        if($filter_warna === ''){
+            $filter_warna = 'masalah';
+        }
         $search = trim((string)$this->input->get('q', TRUE));
 
-        // Ambil daftar siswa sesuai filter ruang & kelas
+        // Jika ruang belum dipilih, jangan muat/tampilkan data siswa
+        if($ruang === ''){
+            echo json_encode(array(
+                'status' => 1,
+                'empty_room' => true,
+                'waktu_server' => date('H:i:s'),
+                'summary' => array('total' => 0, 'merah' => 0, 'kuning' => 0, 'hijau' => 0, 'belum' => 0, 'masalah' => 0),
+                'items' => array()
+            ));
+            return;
+        }
+
+        // Ambil daftar siswa sesuai filter ruang
         $this->db->select('u.user_id, u.user_name, u.user_firstname, u.user_detail, u.user_ip, u.user_login, u.user_login_date, g.grup_nama')
                  ->from('cbt_user u')
                  ->join('cbt_user_grup g', 'g.grup_id = u.user_grup_id', 'left');
 
-        if($ruang !== '' && $ruang !== 'semua'){
+        if($ruang === '__tanpa_ruang__'){
+            $this->db->where("(u.user_detail IS NULL OR TRIM(u.user_detail) = '')", null, false);
+        }elseif($ruang !== 'semua'){
             $this->db->where('u.user_detail', $ruang);
         }
         if($group !== '' && $group !== 'semua' && is_numeric($group)){
@@ -170,7 +193,7 @@ class Tes_hasil_operator extends Member_Controller {
 
         $now_dt = new DateTime();
         $items = array();
-        $summary = array('total' => 0, 'merah' => 0, 'kuning' => 0, 'hijau' => 0, 'belum' => 0);
+        $summary = array('total' => 0, 'merah' => 0, 'kuning' => 0, 'hijau' => 0, 'belum' => 0, 'masalah' => 0);
 
         foreach($users as $u){
             $uid = (int)$u->user_id;
@@ -281,8 +304,17 @@ class Tes_hasil_operator extends Member_Controller {
             if(isset($summary[$warna])){
                 $summary[$warna]++;
             }
+            if($warna === 'merah' || $warna === 'kuning'){
+                $summary['masalah']++;
+            }
 
-            if($filter_warna !== '' && $filter_warna !== 'semua' && $filter_warna !== $warna){
+            // Default: utamakan Kuning & Merah saja (Hijau & Belum cukup angka ringkasan).
+            // Jika pengawas sedang mengetik pencarian nama/NISN, tampilkan siswa yang dicari walaupun Hijau/Belum.
+            if($filter_warna === 'masalah'){
+                if($search === '' && $warna !== 'merah' && $warna !== 'kuning'){
+                    continue;
+                }
+            }elseif($filter_warna !== '' && $filter_warna !== 'semua' && $filter_warna !== $warna){
                 continue;
             }
 

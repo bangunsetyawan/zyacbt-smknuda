@@ -162,8 +162,8 @@
                 <div class="box-header with-border">
                     <h3 class="box-title"><i class="fa fa-map-marker"></i> Filter Ruang Ujian</h3>
                     <div class="box-tools pull-right">
-                        <span id="indikator-live" class="label label-success" style="font-size:11.5px; padding:4px 8px;">
-                            <i class="fa fa-circle"></i> Live 10d (<span id="jam-update">-</span>)
+                        <span id="indikator-live" class="label label-default" style="font-size:11.5px; padding:4px 8px;">
+                            <i class="fa fa-circle-o"></i> Pilih Ruang (<span id="jam-update">-</span>)
                         </span>
                     </div>
                 </div>
@@ -188,40 +188,44 @@
                             <input type="text" id="filter-q" class="form-control" placeholder="Ketik nama atau NISN siswa...">
                         </div>
                     </div>
-                    <input type="hidden" id="filter-warna" value="semua">
+                    <input type="hidden" id="filter-warna" value="masalah">
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Ringkasan 4 Kartu Warna (Klik untuk filter cepat) -->
-    <div class="pengawas-summary-grid">
-        <div class="pengawas-stat-card stat-merah" onclick="set_filter_warna('merah')" id="card-stat-merah" title="Klik untuk menampilkan siswa Paket Data / Publik saja">
-            <div class="pengawas-stat-num text-danger" id="jml-merah">0</div>
-            <div class="pengawas-stat-label"><i class="fa fa-warning text-danger"></i> MERAH (Paket Data / Publik)</div>
+    <!-- Ringkasan 4 Kartu Warna (Tersembunyi sebelum pilih ruang; Hijau & Belum cukup angka hitungan) -->
+    <div id="wadah-ringkasan" style="display:none;">
+        <div class="pengawas-summary-grid">
+            <div class="pengawas-stat-card stat-merah" onclick="set_filter_warna('merah')" id="card-stat-merah" title="Klik untuk menampilkan siswa Paket Data / Publik saja">
+                <div class="pengawas-stat-num text-danger" id="jml-merah">0</div>
+                <div class="pengawas-stat-label"><i class="fa fa-warning text-danger"></i> MERAH (Paket Data)</div>
+            </div>
+            <div class="pengawas-stat-card stat-kuning" onclick="set_filter_warna('kuning')" id="card-stat-kuning" title="Klik untuk menampilkan siswa yang pernah pindah jaringan">
+                <div class="pengawas-stat-num text-yellow" id="jml-kuning">0</div>
+                <div class="pengawas-stat-label"><i class="fa fa-exchange text-yellow"></i> KUNING (Pindah IP)</div>
+            </div>
+            <div class="pengawas-stat-card stat-hijau" onclick="set_filter_warna('hijau')" id="card-stat-hijau" title="Angka siswa aman di LAN sekolah (klik bila ingin melihat daftar)">
+                <div class="pengawas-stat-num text-success" id="jml-hijau">0</div>
+                <div class="pengawas-stat-label"><i class="fa fa-check-circle text-success"></i> HIJAU (LAN Aman)</div>
+            </div>
+            <div class="pengawas-stat-card stat-belum" onclick="set_filter_warna('belum')" id="card-stat-belum" title="Angka siswa yang belum login / mulai ujian di ruang ini">
+                <div class="pengawas-stat-num text-muted" id="jml-belum">0</div>
+                <div class="pengawas-stat-label"><i class="fa fa-clock-o text-muted"></i> BELUM LOGIN (<span id="jml-total">0</span> Total)</div>
+            </div>
         </div>
-        <div class="pengawas-stat-card stat-kuning" onclick="set_filter_warna('kuning')" id="card-stat-kuning" title="Klik untuk menampilkan siswa yang pernah pindah jaringan">
-            <div class="pengawas-stat-num text-yellow" id="jml-kuning">0</div>
-            <div class="pengawas-stat-label"><i class="fa fa-exchange text-yellow"></i> KUNING (Pernah Pindah IP)</div>
-        </div>
-        <div class="pengawas-stat-card stat-hijau" onclick="set_filter_warna('hijau')" id="card-stat-hijau" title="Klik untuk menampilkan siswa LAN Lokal yang aman">
-            <div class="pengawas-stat-num text-success" id="jml-hijau">0</div>
-            <div class="pengawas-stat-label"><i class="fa fa-check-circle text-success"></i> HIJAU (LAN Sekolah Aman)</div>
-        </div>
-        <div class="pengawas-stat-card stat-belum" onclick="set_filter_warna('semua')" id="card-stat-semua" title="Klik untuk menampilkan semua peserta">
-            <div class="pengawas-stat-num" id="jml-total">0</div>
-            <div class="pengawas-stat-label"><i class="fa fa-list"></i> SEMUA (<span id="jml-belum">0</span> Belum Mulai)</div>
+        <div id="bar-mode-pantau" style="margin-bottom:10px; font-size:12.5px; color:#374151; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+            <span id="teks-mode-pantau"><i class="fa fa-eye text-danger"></i> Menampilkan <b>Kuning &amp; Merah saja</b> (fokus pelanggaran).</span>
+            <button type="button" id="btn-reset-mode" class="btn btn-xs btn-default" onclick="set_filter_warna('masalah')" style="display:none;">
+                <i class="fa fa-undo"></i> Kembali ke Merah &amp; Kuning
+            </button>
         </div>
     </div>
 
-    <!-- Daftar Kartu Siswa (Mobile-First, Merah & Kuning otomatis paling atas) -->
+    <!-- Daftar Kartu Siswa (Kosong sebelum pilih ruang) -->
     <div class="row">
         <div class="col-xs-12">
-            <div id="wadah-daftar-siswa">
-                <div class="callout callout-info">
-                    <i class="fa fa-spinner fa-spin"></i> Memuat data pemantauan ruang...
-                </div>
-            </div>
+            <div id="wadah-daftar-siswa"></div>
         </div>
     </div>
 </section>
@@ -241,16 +245,42 @@
             .replace(/'/g, '&#039;');
     }
 
+    function update_mode_banner(){
+        var aktif = $('#filter-warna').val();
+        $('.pengawas-stat-card').removeClass('active-filter');
+        if(aktif === 'masalah'){
+            $('#teks-mode-pantau').html('<i class="fa fa-eye text-danger"></i> Menampilkan <b>Kuning &amp; Merah saja</b> (Hijau &amp; Belum Login ditampilkan sebagai angka ringkasan).');
+            $('#btn-reset-mode').hide();
+        }else if(aktif === 'merah'){
+            $('#card-stat-merah').addClass('active-filter');
+            $('#teks-mode-pantau').html('<i class="fa fa-filter text-danger"></i> Filter aktif: <b>MERAH saja</b>.');
+            $('#btn-reset-mode').show();
+        }else if(aktif === 'kuning'){
+            $('#card-stat-kuning').addClass('active-filter');
+            $('#teks-mode-pantau').html('<i class="fa fa-filter text-yellow"></i> Filter aktif: <b>KUNING saja</b>.');
+            $('#btn-reset-mode').show();
+        }else if(aktif === 'hijau'){
+            $('#card-stat-hijau').addClass('active-filter');
+            $('#teks-mode-pantau').html('<i class="fa fa-filter text-success"></i> Filter aktif: <b>HIJAU saja</b>.');
+            $('#btn-reset-mode').show();
+        }else if(aktif === 'belum'){
+            $('#card-stat-belum').addClass('active-filter');
+            $('#teks-mode-pantau').html('<i class="fa fa-filter text-muted"></i> Filter aktif: <b>BELUM LOGIN / MULAI saja</b>.');
+            $('#btn-reset-mode').show();
+        }
+    }
+
     function set_filter_warna(warna){
+        if($('#filter-ruang').val() === ''){
+            return;
+        }
         var cur = $('#filter-warna').val();
-        if(cur === warna && warna !== 'semua'){
-            $('#filter-warna').val('semua');
+        if(cur === warna && warna !== 'masalah'){
+            $('#filter-warna').val('masalah');
         }else{
             $('#filter-warna').val(warna);
         }
-        $('.pengawas-stat-card').removeClass('active-filter');
-        var aktif = $('#filter-warna').val();
-        $('#card-stat-' + aktif).addClass('active-filter');
+        update_mode_banner();
         muat_data_pantau(true);
     }
 
@@ -264,7 +294,24 @@
         }
     }
 
+    function reset_tampilan_kosong(){
+        $('#wadah-ringkasan').hide();
+        $('#wadah-daftar-siswa').html('');
+        $('#indikator-live')
+            .removeClass('label-success')
+            .addClass('label-default')
+            .html('<i class="fa fa-circle-o"></i> Pilih Ruang (<span id="jam-update">-</span>)');
+    }
+
     function muat_data_pantau(isManual){
+        var ruang = $('#filter-ruang').val();
+        if(!ruang || ruang === ''){
+            reset_tampilan_kosong();
+            if(isManual && typeof notify_info === 'function'){
+                notify_info('Silahkan pilih Ruang Ujian terlebih dahulu.');
+            }
+            return;
+        }
         if(sedangMemuat) return;
         sedangMemuat = true;
         if(isManual){
@@ -278,7 +325,7 @@
             cache: false,
             timeout: 8000,
             data: {
-                ruang: $('#filter-ruang').val(),
+                ruang: ruang,
                 warna: $('#filter-warna').val(),
                 q:     $('#filter-q').val(),
                 _t:    new Date().getTime()
@@ -291,7 +338,17 @@
                 }
                 if(!res || res.status != 1) return;
 
-                $('#jam-update').text(res.waktu_server || '-');
+                if(res.empty_room){
+                    reset_tampilan_kosong();
+                    return;
+                }
+
+                $('#wadah-ringkasan').show();
+                $('#indikator-live')
+                    .removeClass('label-default')
+                    .addClass('label-success')
+                    .html('<i class="fa fa-circle"></i> Live 10d (<span id="jam-update">' + esc_html(res.waktu_server || '-') + '</span>)');
+
                 $('#jml-merah').text(res.summary.merah || 0);
                 $('#jml-kuning').text(res.summary.kuning || 0);
                 $('#jml-hijau').text(res.summary.hijau || 0);
@@ -299,12 +356,24 @@
                 $('#jml-total').text(res.summary.total || 0);
 
                 var items = res.items || [];
+                var qVal = $.trim($('#filter-q').val());
+                var modeWarna = $('#filter-warna').val();
+
                 if(items.length === 0){
-                    $('#wadah-daftar-siswa').html(
-                        '<div class="box box-solid"><div class="box-body text-center text-muted" style="padding:24px;">' +
-                        '<i class="fa fa-info-circle fa-2x"></i><p style="margin-top:8px; margin-bottom:0;">Tidak ada peserta yang cocok dengan filter ruang ini.</p>' +
-                        '</div></div>'
-                    );
+                    if(modeWarna === 'masalah' && qVal === ''){
+                        $('#wadah-daftar-siswa').html(
+                            '<div class="callout callout-success" style="margin-bottom:0;">' +
+                            '<i class="fa fa-check-circle"></i> <b>Ruang Aman (0 Merah, 0 Kuning):</b> Tidak ada pelanggaran jaringan di ruang ini. ' +
+                            'Tercatat <b>' + (res.summary.hijau || 0) + ' siswa LAN aman</b> dan <b>' + (res.summary.belum || 0) + ' belum login/mulai</b>.' +
+                            '</div>'
+                        );
+                    }else{
+                        $('#wadah-daftar-siswa').html(
+                            '<div class="box box-solid"><div class="box-body text-center text-muted" style="padding:20px;">' +
+                            '<i class="fa fa-info-circle"></i> Tidak ada peserta yang cocok dengan filter ini.' +
+                            '</div></div>'
+                        );
+                    }
                     return;
                 }
 
@@ -364,7 +433,7 @@
             error: function(){
                 sedangMemuat = false;
                 set_tombol_loading(false);
-                if(!retryAwalDone){
+                if(!retryAwalDone && $('#filter-ruang').val() !== ''){
                     retryAwalDone = true;
                     setTimeout(function(){
                         muat_data_pantau(false);
@@ -375,12 +444,19 @@
     }
 
     $(function(){
+        update_mode_banner();
+        reset_tampilan_kosong();
+
         $('#filter-ruang').change(function(){
+            retryAwalDone = false;
+            $('#filter-warna').val('masalah');
+            update_mode_banner();
             muat_data_pantau(true);
         });
 
         var searchTimeout = null;
         $('#filter-q').on('keyup input', function(){
+            if($('#filter-ruang').val() === '') return;
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(function(){
                 muat_data_pantau(false);
@@ -391,10 +467,11 @@
             muat_data_pantau(true);
         });
 
-        // Muat pertama kali segera saat DOM siap & jalankan auto-refresh tiap 10 detik
-        muat_data_pantau(false);
+        // Auto-refresh tiap 10 detik HANYA bila ruang sudah dipilih
         timerPantau = setInterval(function(){
-            muat_data_pantau(false);
+            if($('#filter-ruang').val() !== ''){
+                muat_data_pantau(false);
+            }
         }, 10000);
     });
 </script>
