@@ -23,7 +23,7 @@ class Tes_hasil_operator extends Member_Controller {
         $data['kode_menu'] = $this->kode_menu;
         $data['url'] = $this->url;
 
-        $is_admin = ($this->access->get_level() === 'admin');
+        $is_admin = (strtolower(trim((string)$this->access->get_level())) === 'admin');
 
         // 1. Daftar Ruang untuk Kartu Ruang (dari cbt_user.user_detail / Keterangan)
         $ruang_list = array();
@@ -95,7 +95,7 @@ class Tes_hasil_operator extends Member_Controller {
             return;
         }
 
-        $is_admin = ($this->access->get_level() === 'admin');
+        $is_admin = (strtolower(trim((string)$this->access->get_level())) === 'admin');
         if($ruang === 'semua_masalah'){
             if(!$is_admin){
                 echo json_encode(array(

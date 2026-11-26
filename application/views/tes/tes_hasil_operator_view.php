@@ -19,11 +19,11 @@
         box-shadow: 0 2px 4px rgba(0,0,0,0.12);
     }
 
-    /* Grid Kartu Ruang 1-Tap (Mobile-First) */
+    /* Grid Kartu Ruang 1-Tap (Mobile-First, selalu tampil agar pindah ruang 1x ketuk) */
     .ruang-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
-        gap: 8px;
+        gap: 7px;
     }
     @media (min-width: 768px) {
         .ruang-grid {
@@ -36,13 +36,13 @@
         align-items: center;
         justify-content: center;
         text-align: center;
-        padding: 12px 6px;
+        padding: 9px 6px;
         background: #f8fafc;
         border: 2px solid #cbd5e1;
         border-radius: 8px;
         cursor: pointer;
         transition: all 0.12s ease;
-        min-height: 64px;
+        min-height: 52px;
         user-select: none;
     }
     .ruang-card-btn:active, .ruang-card-btn:hover {
@@ -56,46 +56,31 @@
         box-shadow: 0 2px 6px rgba(22, 163, 74, 0.35);
     }
     .ruang-card-title {
-        font-size: 14px;
+        font-size: 13.5px;
         font-weight: 800;
         line-height: 1.2;
     }
     .ruang-card-count {
-        font-size: 11.5px;
+        font-size: 11px;
         font-weight: 600;
-        opacity: 0.82;
-        margin-top: 3px;
+        opacity: 0.85;
+        margin-top: 2px;
     }
     .ruang-card-btn.is-admin-all {
         grid-column: 1 / -1;
         flex-direction: row;
         gap: 8px;
-        min-height: 46px;
-        padding: 10px 12px;
+        min-height: 42px;
+        padding: 8px 12px;
         background: #fef2f2;
         border-color: #fca5a5;
         color: #991b1b;
     }
     .ruang-card-btn.is-admin-all.is-active {
-        background: #dc2626;
-        border-color: #b91c1c;
+        background: #16a34a;
+        border-color: #15803d;
         color: #ffffff;
-    }
-    .ruang-aktif-bar {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 10px;
-        background: #f0fdf4;
-        border: 1.5px solid #86efac;
-        border-radius: 6px;
-        padding: 8px 12px;
-        margin-bottom: 10px;
-    }
-    .ruang-aktif-label {
-        font-size: 14px;
-        font-weight: 700;
-        color: #14532d;
+        box-shadow: 0 2px 6px rgba(22, 163, 74, 0.35);
     }
 
     .pengawas-summary-grid {
@@ -299,25 +284,15 @@
                     </div>
                 </div>
                 <div class="box-body">
-                    <!-- Bar Ruang Aktif (tampil setelah ruang dipilih agar kartu siswa langsung terlihat tanpa scroll) -->
-                    <div id="bar-ruang-aktif" class="ruang-aktif-bar" style="display:none;">
-                        <div class="ruang-aktif-label">
-                            <i class="fa fa-map-marker text-success"></i> <span id="teks-ruang-aktif">-</span>
-                        </div>
-                        <button type="button" id="btn-ganti-ruang" class="btn btn-sm btn-default" onclick="tampilkan_grid_ruang(true)">
-                            <i class="fa fa-th-large"></i> Ganti Ruang
-                        </button>
-                    </div>
-
-                    <!-- Grid Kartu Ruang (Ketuk 1x langsung memantau ruang tersebut) -->
+                    <!-- Grid Kartu Ruang (Selalu Tampil — Ketuk 1x langsung memantau/pindah ruang) -->
                     <div id="wadah-grid-ruang" class="ruang-grid" style="margin-bottom: 10px;">
                         <?php if(!empty($is_admin)): ?>
-                        <button type="button" class="ruang-card-btn is-admin-all" data-ruang="semua_masalah" data-label="Semua Ruang (Merah & Kuning)" onclick="pilih_ruang(this)">
+                        <button type="button" class="ruang-card-btn is-admin-all" data-ruang="semua_masalah" onclick="pilih_ruang(this)">
                             <span class="ruang-card-title"><i class="fa fa-globe"></i> Semua Ruang (Khusus Merah &amp; Kuning)</span>
                         </button>
                         <?php endif; ?>
                         <?php if(!empty($ruang_list)): foreach($ruang_list as $rl): ?>
-                        <button type="button" class="ruang-card-btn" data-ruang="<?php echo html_escape($rl['kode']); ?>" data-label="<?php echo html_escape($rl['label']).' ('.(int)$rl['jumlah'].' siswa)'; ?>" onclick="pilih_ruang(this)">
+                        <button type="button" class="ruang-card-btn" data-ruang="<?php echo html_escape($rl['kode']); ?>" onclick="pilih_ruang(this)">
                             <span class="ruang-card-title"><?php echo html_escape($rl['label']); ?></span>
                             <span class="ruang-card-count"><?php echo (int)$rl['jumlah']; ?> siswa</span>
                         </button>
@@ -326,7 +301,7 @@
                         <?php endif; ?>
                     </div>
 
-                    <!-- Tombol Segarkan Besar & Jelas (Muncul atau aktif saat ruang dipilih) -->
+                    <!-- Tombol Segarkan Besar & Jelas (Muncul setelah ruang dipilih) -->
                     <div class="row" id="wadah-tombol-segarkan" style="display:none;">
                         <div class="col-xs-12">
                             <button type="button" id="btn-refresh-manual" class="btn btn-success btn-block btn-segarkan-besar">
@@ -393,28 +368,15 @@
             .replace(/'/g, '&#039;');
     }
 
-    function tampilkan_grid_ruang(tampil){
-        if(tampil){
-            $('#wadah-grid-ruang').show();
-            $('#bar-ruang-aktif').hide();
-        }else{
-            $('#wadah-grid-ruang').hide();
-            $('#bar-ruang-aktif').show();
-        }
-    }
-
     function pilih_ruang(btnEl){
         var $btn = $(btnEl);
         var ruang = $btn.data('ruang') || '';
-        var label = $btn.data('label') || ruang;
 
         $('.ruang-card-btn').removeClass('is-active');
         $btn.addClass('is-active');
 
         $('#filter-ruang').val(ruang);
-        $('#teks-ruang-aktif').text(label);
         $('#wadah-tombol-segarkan').show();
-        tampilkan_grid_ruang(false);
 
         retryAwalDone = false;
         $('#filter-warna').val('masalah');
@@ -481,8 +443,6 @@
     function reset_tampilan_kosong(){
         $('#wadah-ringkasan').hide();
         $('#wadah-tombol-segarkan').hide();
-        $('#bar-ruang-aktif').hide();
-        $('#wadah-grid-ruang').show();
         $('#wadah-daftar-siswa').html('');
         $('#indikator-live')
             .removeClass('label-success')
