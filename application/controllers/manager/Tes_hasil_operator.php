@@ -1,9 +1,6 @@
 <?php if ( ! defined('BASEPATH')) exit('No direct script access allowed');
 /**
-* ZYA CBT
-* Achmad Lutfi
-* achmdlutfi@gmail.com
-* achmadlutfi.wordpress.com
+* ZYA CBT — Halaman Pantau Ruang & Pengawas (Read-Only, Mobile-First)
 */
 class Tes_hasil_operator extends Member_Controller {
 	private $kode_menu = 'tes-hasil-operator';
@@ -16,14 +13,8 @@ class Tes_hasil_operator extends Member_Controller {
 		$this->load->model('cbt_user_model');
 		$this->load->model('cbt_user_grup_model');
 		$this->load->model('cbt_tes_model');
-		$this->load->model('cbt_tes_token_model');
-		$this->load->model('cbt_tes_topik_set_model');
 		$this->load->model('cbt_tes_user_model');
-		$this->load->model('cbt_tesgrup_model');
-		$this->load->model('cbt_soal_model');
-		$this->load->model('cbt_jawaban_model');
 		$this->load->model('cbt_tes_soal_model');
-		$this->load->model('cbt_tes_soal_jawaban_model');
 
 		parent::cek_akses($this->kode_menu);
 	}
@@ -31,128 +22,331 @@ class Tes_hasil_operator extends Member_Controller {
     public function index($page=null, $id=null){
         $data['kode_menu'] = $this->kode_menu;
         $data['url'] = $this->url;
-		
-        $username = $this->access->get_username();
-        $user_id = $this->users_model->get_login_info($username)->id;
 
-		// mendapatkan token hari ini yang di generate user
-		$query_token = $this->cbt_tes_token_model->get_by_user_now($user_id);
-		$token = '';
-		if($query_token->num_rows()>0){
-			$query_token = $query_token->row();
-			$token = $query_token->token;
-		}
-
-		$data['token'] = $token;
-        
-        $this->template->display_admin($this->kelompok.'/tes_hasil_operator_view', 'Hasil Tes', $data);
-    }
-    
-    function get_datatable(){
-		// variable initialization
-		$token = $this->input->get('token');
-
-		$search = "";
-		$start = 0;
-		$rows = 10;
-
-		// get search value (if any)
-		if (isset($_GET['sSearch']) && $_GET['sSearch'] != "" ) {
-			$search = $_GET['sSearch'];
-		}
-
-		// limit
-		$start = $this->get_start();
-		$rows = $this->get_rows();
-
-		// run query to get user listing
-		$query = $this->cbt_tes_user_model->get_datatable_operator($start, $rows, $token);
-		$iFilteredTotal = $query->num_rows();
-		
-		$iTotal= $this->cbt_tes_user_model->get_datatable_operator_count($token)->row()->hasil;
-	    
-		$output = array(
-			"sEcho" => isset($_GET['sEcho']) ? intval($_GET['sEcho']) : 1,
-	        "iTotalRecords" => $iTotal,
-	        "iTotalDisplayRecords" => $iTotal,
-	        "aaData" => array()
-	    );
-
-	    // get result after running query and put it in array
-		$i=$start;
-		$query = $query->result();
-	    foreach ($query as $temp) {			
-			$record = array();
-            
-			$record[] = ++$i;
-            $record[] = $temp->tesuser_creation_time;
-            $record[] = $temp->tes_duration_time.' menit';
-            $record[] = $temp->tes_nama;
-            $record[] = $temp->grup_nama;
-            $record[] = $temp->user_firstname;
-            $record[] = $temp->nilai;
-            if($temp->tesuser_status==1){
-            	$tanggal = new DateTime();
-                // Cek apakah tes sudah melebihi batas waktu
-                $tanggal_tes = new DateTime($temp->tesuser_creation_time);
-                $tanggal_tes->modify('+'.$temp->tes_duration_time.' minutes');
-                if($tanggal>$tanggal_tes){
-                	$record[] = 'Selesai';
-                }else{
-                	$tanggal = $tanggal_tes->diff($tanggal);
-                	$menit_sisa = ($tanggal->h*60)+($tanggal->i);
-                	$record[] = 'Berjalan (-'.$menit_sisa.' menit)';
+        // 1. Dropdown Ruang (dari cbt_user.user_detail / Keterangan)
+        $select_ruang = '<option value="semua">-- Semua Ruang --</option>';
+        $q_ruang = $this->db->select('user_detail, COUNT(*) AS jml')
+                            ->from('cbt_user')
+                            ->where('user_detail IS NOT NULL', null, false)
+                            ->where("TRIM(user_detail) !=", '')
+                            ->group_by('user_detail')
+                            ->order_by('user_detail', 'ASC')
+                            ->get();
+        if($q_ruang->num_rows() > 0){
+            foreach($q_ruang->result() as $r){
+                $r_val = trim((string)$r->user_detail);
+                if($r_val !== ''){
+                    $select_ruang .= '<option value="'.html_escape($r_val).'">'.html_escape($r_val).' ('.(int)$r->jml.' siswa)</option>';
                 }
-            }else{
-            	$record[] = 'Selesai';
-            }            
+            }
+        }
+        $data['select_ruang'] = $select_ruang;
 
-			$output['aaData'][] = $record;
-		}
-		// format it to JSON, this output will be displayed in datatable
+        // 2. Dropdown Kelas / Group (dari cbt_user_grup)
+        $select_group = '<option value="semua">-- Semua Kelas / Group --</option>';
+        $q_group = $this->cbt_user_grup_model->get_group();
+        if($q_group->num_rows() > 0){
+            foreach($q_group->result() as $g){
+                $select_group .= '<option value="'.(int)$g->grup_id.'">'.html_escape($g->grup_nama).'</option>';
+            }
+        }
+        $data['select_group'] = $select_group;
+
+        // 3. Dropdown Tes (Utamakan tes hari ini / aktif)
+        $select_tes = '<option value="semua">-- Semua Ujian (Sesi Terakhir Siswa) --</option>';
+        $q_tes = $this->db->select('tes_id, tes_nama, tes_begin_time, tes_end_time')
+                          ->from('cbt_tes')
+                          ->order_by('tes_id', 'DESC')
+                          ->limit(30)
+                          ->get();
+        if($q_tes->num_rows() > 0){
+            foreach($q_tes->result() as $t){
+                $select_tes .= '<option value="'.(int)$t->tes_id.'">'.html_escape($t->tes_nama).'</option>';
+            }
+        }
+        $data['select_tes'] = $select_tes;
         
-		echo json_encode($output);
-	}
-	
-	/**
-	* funsi tambahan 
-	* 
-	* 
-*/
-	
-	function get_start() {
-		$start = 0;
-		if (isset($_GET['iDisplayStart'])) {
-			$start = intval($_GET['iDisplayStart']);
+        $this->template->display_admin($this->kelompok.'/tes_hasil_operator_view', 'Pantau Ruang Pengawas', $data);
+    }
 
-			if ($start < 0)
-				$start = 0;
-		}
+    /**
+     * Endpoint JSON ringan untuk polling auto-refresh tiap 10 detik dari HP Pengawas
+     * Read-only: Tanpa skor/nilai dan tanpa aksi proktor.
+     */
+    public function get_pantau_data(){
+        $ruang  = trim((string)$this->input->get('ruang', TRUE));
+        $group  = trim((string)$this->input->get('group', TRUE));
+        $tes_id = trim((string)$this->input->get('tes', TRUE));
+        $filter_warna = trim((string)$this->input->get('warna', TRUE)); // semua | merah | kuning | hijau | belum
+        $search = trim((string)$this->input->get('q', TRUE));
 
-		return $start;
-	}
+        // Ambil daftar siswa sesuai filter ruang & kelas
+        $this->db->select('u.user_id, u.user_name, u.user_firstname, u.user_detail, u.user_ip, u.user_login, u.user_login_date, g.grup_nama')
+                 ->from('cbt_user u')
+                 ->join('cbt_user_grup g', 'g.grup_id = u.user_grup_id', 'left');
 
-	function get_rows() {
-		$rows = 10;
-		if (isset($_GET['iDisplayLength'])) {
-			$rows = intval($_GET['iDisplayLength']);
-			if ($rows < 5 || $rows > 500) {
-				$rows = 10;
-			}
-		}
+        if($ruang !== '' && $ruang !== 'semua'){
+            $this->db->where('u.user_detail', $ruang);
+        }
+        if($group !== '' && $group !== 'semua' && is_numeric($group)){
+            $this->db->where('u.user_grup_id', (int)$group);
+        }
+        if($search !== ''){
+            $s_like = $this->db->escape_like_str($search);
+            $this->db->where("(u.user_firstname LIKE '%{$s_like}%' ESCAPE '!' OR u.user_name LIKE '%{$s_like}%' ESCAPE '!' OR u.user_detail LIKE '%{$s_like}%' ESCAPE '!')", null, false);
+        }
 
-		return $rows;
-	}
+        $this->db->order_by('u.user_firstname', 'ASC')
+                 ->limit(300);
+        $users = $this->db->get()->result();
 
-	function get_sort_dir() {
-		$sort_dir = "ASC";
-		if (isset($_GET['sSortDir_0'])) {
-			$sdir = strip_tags($_GET['sSortDir_0']);
-			if ($sdir != "asc" ) {
-				$sort_dir = "DESC";
-			}
-		}
+        if(empty($users)){
+            echo json_encode(array(
+                'status' => 1,
+                'waktu_server' => date('H:i:s'),
+                'summary' => array('total' => 0, 'merah' => 0, 'kuning' => 0, 'hijau' => 0, 'belum' => 0),
+                'items' => array()
+            ));
+            return;
+        }
 
-		return $sort_dir;
-	}
+        $user_ids = array();
+        $usernames = array();
+        foreach($users as $u){
+            $user_ids[] = (int)$u->user_id;
+            $usernames[] = (string)$u->user_name;
+        }
+
+        // Ambil sesi ujian terakhir per siswa (beserta progres soal terjawab / total soal & IP soal terakhir)
+        $tes_cond = '';
+        if($tes_id !== '' && $tes_id !== 'semua' && is_numeric($tes_id)){
+            $tes_cond = ' AND tu.tesuser_tes_id = '.(int)$tes_id;
+        }
+
+        $ids_csv = implode(',', $user_ids);
+        $sql_sesi = "
+            SELECT 
+                tu.tesuser_id,
+                tu.tesuser_user_id,
+                tu.tesuser_tes_id,
+                tu.tesuser_status,
+                tu.tesuser_creation_time,
+                t.tes_nama,
+                t.tes_duration_time,
+                COUNT(ts.tessoal_id) AS total_soal,
+                SUM(CASE WHEN ts.tessoal_change_time IS NOT NULL THEN 1 ELSE 0 END) AS terjawab,
+                MAX(ts.tessoal_change_time) AS last_answer_time,
+                SUBSTRING_INDEX(
+                    GROUP_CONCAT(
+                        CASE WHEN ts.tessoal_user_ip IS NOT NULL AND ts.tessoal_user_ip != '' THEN ts.tessoal_user_ip ELSE NULL END
+                        ORDER BY COALESCE(ts.tessoal_change_time, ts.tessoal_creation_time) DESC, ts.tessoal_id DESC
+                        SEPARATOR ';;'
+                    ),
+                    ';;', 1
+                ) AS last_soal_ip,
+                SUM(CASE WHEN ts.tessoal_user_ip LIKE 'PUB|%' THEN 1 ELSE 0 END) AS soal_pub_count
+            FROM cbt_tes_user tu
+            INNER JOIN cbt_tes t ON t.tes_id = tu.tesuser_tes_id
+            LEFT JOIN cbt_tes_soal ts ON ts.tessoal_tesuser_id = tu.tesuser_id
+            WHERE tu.tesuser_user_id IN ({$ids_csv}) {$tes_cond}
+            GROUP BY tu.tesuser_id
+            ORDER BY tu.tesuser_id ASC
+        ";
+        $sesi_rows = $this->db->query($sql_sesi)->result();
+        $sesi_by_user = array();
+        foreach($sesi_rows as $sr){
+            // Simpan sesi paling baru untuk tiap user_id
+            $sesi_by_user[(int)$sr->tesuser_user_id] = $sr;
+        }
+
+        // Ambil riwayat pelanggaran / pindah jaringan di user_log hari ini untuk daftar username tersebut
+        $today_date = date('Y-m-d');
+        $log_by_username = array();
+        if(!empty($usernames)){
+            $this->db->select('username, log, ts')
+                     ->from('user_log')
+                     ->where_in('username', $usernames)
+                     ->where('DATE(ts) >=', $today_date)
+                     ->order_by('id', 'DESC');
+            $q_logs = $this->db->get();
+            if($q_logs && $q_logs->num_rows() > 0){
+                foreach($q_logs->result() as $lg){
+                    $uname = (string)$lg->username;
+                    if(!isset($log_by_username[$uname])){
+                        $log_by_username[$uname] = array(
+                            'count' => 0,
+                            'has_pub' => false,
+                            'last_log' => $lg->log,
+                            'last_ts' => date('H:i:s', strtotime($lg->ts))
+                        );
+                    }
+                    $log_by_username[$uname]['count']++;
+                    if(strpos($lg->log, 'PAKET DATA') !== false || strpos($lg->log, 'PUB|') !== false){
+                        $log_by_username[$uname]['has_pub'] = true;
+                    }
+                }
+            }
+        }
+
+        $now_dt = new DateTime();
+        $items = array();
+        $summary = array('total' => 0, 'merah' => 0, 'kuning' => 0, 'hijau' => 0, 'belum' => 0);
+
+        foreach($users as $u){
+            $uid = (int)$u->user_id;
+            $uname = (string)$u->user_name;
+            $sesi = isset($sesi_by_user[$uid]) ? $sesi_by_user[$uid] : null;
+            $ulog = isset($log_by_username[$uname]) ? $log_by_username[$uname] : null;
+
+            // Tentukan tag IP aktif terakhir (prioritas: user_ip terbaru -> last_soal_ip)
+            $raw_tag = trim((string)$u->user_ip);
+            if($raw_tag === '' && $sesi && !empty($sesi->last_soal_ip)){
+                $raw_tag = trim((string)$sesi->last_soal_ip);
+            }
+
+            $cur_mode = '';
+            $cur_ip = '-';
+            if(strpos($raw_tag, 'PUB|') === 0){
+                $cur_mode = 'PUB';
+                $cur_ip = substr($raw_tag, 4);
+            }elseif(strpos($raw_tag, 'LAN|') === 0){
+                $cur_mode = 'LAN';
+                $cur_ip = substr($raw_tag, 4);
+            }elseif($raw_tag !== ''){
+                // Format lama tanpa prefix
+                $cur_ip = $raw_tag;
+                if(preg_match('/^(10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.|127\.)/', $raw_tag)){
+                    $cur_mode = 'LAN';
+                }else{
+                    $cur_mode = 'PUB';
+                }
+            }
+
+            // Perjelas tampilan apabila IP LAN tercatat sebagai Docker bridge gateway 172.18.0.1
+            $ip_display = $cur_ip;
+            if($cur_mode === 'LAN' && strpos($cur_ip, '172.18.') === 0){
+                $ip_display = '10.10.10.10 (LAN Sekolah)';
+            }
+
+            $pernah_pub = false;
+            if(($ulog && $ulog['has_pub']) || ($sesi && (int)$sesi->soal_pub_count > 0)){
+                $pernah_pub = true;
+            }
+
+            // Status & Progres Ujian (Tanpa menampilkan Nilai/Skor)
+            $status_ujian = 'Belum Mulai';
+            $status_kode = 'belum'; // berjalan | selesai | belum
+            $tes_nama = '-';
+            $progres_teks = 'Belum membuka soal';
+            $waktu_mulai = '-';
+            $waktu_aktivitas = '-';
+
+            if($sesi){
+                $tes_nama = (string)$sesi->tes_nama;
+                $terjawab = (int)$sesi->terjawab;
+                $total_soal = (int)$sesi->total_soal;
+                $waktu_mulai = date('H:i', strtotime($sesi->tesuser_creation_time));
+                $waktu_aktivitas = !empty($sesi->last_answer_time)
+                    ? date('H:i:s', strtotime($sesi->last_answer_time))
+                    : date('H:i:s', strtotime($sesi->tesuser_creation_time));
+
+                $batas_dt = new DateTime($sesi->tesuser_creation_time);
+                $batas_dt->modify('+'.(int)$sesi->tes_duration_time.' minutes');
+
+                if((int)$sesi->tesuser_status === 1 && $now_dt < $batas_dt){
+                    $diff = $batas_dt->diff($now_dt);
+                    $sisa_mnt = ($diff->h * 60) + $diff->i;
+                    $status_ujian = 'Berjalan (Sisa '.$sisa_mnt.' mnt)';
+                    $status_kode = 'berjalan';
+                }else{
+                    $status_ujian = 'Selesai';
+                    $status_kode = 'selesai';
+                }
+                $progres_teks = 'Terjawab '.$terjawab.' / '.$total_soal.' soal';
+            }elseif($ulog){
+                $waktu_aktivitas = $ulog['last_ts'];
+            }
+
+            // Tentukan Warna Indikator (Merah / Kuning / Hijau / Belum)
+            // Prioritas pengurutan: 1 = MERAH, 2 = KUNING, 3 = HIJAU (Berjalan), 4 = HIJAU (Selesai/Login), 5 = BELUM
+            if($cur_mode === 'PUB'){
+                $warna = 'merah';
+                $badge_label = 'PAKET DATA / PUBLIK';
+                $jalur_teks = 'Internet / Paket Data (Cloudflare)';
+                $sort_priority = 1;
+            }elseif($cur_mode === 'LAN' && $pernah_pub){
+                $warna = 'kuning';
+                $badge_label = 'PERNAH PINDAH JARINGAN';
+                $jalur_teks = 'Saat ini LAN, tapi tercatat sempat ke Paket Data';
+                $sort_priority = 2;
+            }elseif($cur_mode === 'LAN'){
+                $warna = 'hijau';
+                $badge_label = 'LAN UJIAN (AMAN)';
+                $jalur_teks = 'Jaringan Lokal Sekolah (LAN)';
+                $sort_priority = ($status_kode === 'berjalan') ? 3 : 4;
+            }elseif($sesi){
+                // Sesi lama yang dibuat sebelum fitur pencatatan IP aktif
+                $warna = 'hijau';
+                $badge_label = 'SESI TERCATAT';
+                $jalur_teks = 'Sesi sebelum log IP aktif';
+                $sort_priority = 4;
+            }else{
+                $warna = 'belum';
+                $badge_label = 'BELUM LOGIN / MULAI';
+                $jalur_teks = 'Belum ada koneksi tercatat';
+                $sort_priority = 5;
+            }
+
+            $summary['total']++;
+            if(isset($summary[$warna])){
+                $summary[$warna]++;
+            }
+
+            if($filter_warna !== '' && $filter_warna !== 'semua' && $filter_warna !== $warna){
+                continue;
+            }
+
+            $catatan_log = '';
+            if($ulog && !empty($ulog['last_log'])){
+                $catatan_log = $ulog['last_ts'].' — '.$ulog['last_log'];
+            }elseif($sesi && (int)$sesi->soal_pub_count > 0){
+                $catatan_log = 'Tercatat '.(int)$sesi->soal_pub_count.' jawaban dikirim lewat jalur Paket Data/Publik.';
+            }
+
+            $items[] = array(
+                'user_id'         => $uid,
+                'username'        => $uname,
+                'nama'            => stripslashes((string)$u->user_firstname),
+                'kelas'           => !empty($u->grup_nama) ? (string)$u->grup_nama : '-',
+                'ruang'           => !empty($u->user_detail) ? (string)$u->user_detail : '-',
+                'warna'           => $warna,
+                'badge_label'     => $badge_label,
+                'ip'              => $ip_display,
+                'jalur'           => $jalur_teks,
+                'status_ujian'    => $status_ujian,
+                'status_kode'     => $status_kode,
+                'tes_nama'        => $tes_nama,
+                'progres'         => $progres_teks,
+                'waktu_mulai'     => $waktu_mulai,
+                'waktu_aktivitas' => $waktu_aktivitas,
+                'catatan_log'     => $catatan_log,
+                'sort_priority'   => $sort_priority
+            );
+        }
+
+        // Urutkan: Merah (1) -> Kuning (2) -> Hijau Berjalan (3) -> Hijau Selesai (4) -> Belum (5), lalu Abjad Nama
+        usort($items, function($a, $b){
+            if($a['sort_priority'] !== $b['sort_priority']){
+                return $a['sort_priority'] - $b['sort_priority'];
+            }
+            return strcasecmp($a['nama'], $b['nama']);
+        });
+
+        echo json_encode(array(
+            'status'       => 1,
+            'waktu_server' => date('H:i:s'),
+            'summary'      => $summary,
+            'items'        => $items
+        ));
+    }
 }

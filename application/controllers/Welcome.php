@@ -105,6 +105,7 @@ class Welcome extends CI_Controller {
 				
 				if($hasil==1){
 					$result = $this->cbt_user_model->get_by_username($username);
+					$this->access_tes->record_activity_network($result->user_name, 'LOGIN');
 					
 					// Regenerasi session ID saat login & simpan session
 					$this->session->sess_regenerate(TRUE);

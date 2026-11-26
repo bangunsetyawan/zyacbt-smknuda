@@ -283,7 +283,9 @@ class Tes_kerjakan extends Tes_Controller {
                         return;
                     }
 
+                    $net_jawab = $this->access_tes->record_activity_network($this->username, 'JAWAB', 'Soal #'.$tes_soal_nomor);
                     $data_tes_soal['tessoal_change_time'] = date('Y-m-d H:i:s');
+                    $data_tes_soal['tessoal_user_ip'] = $net_jawab['tag'];
 
                     // menonatifkan ragu-ragu
                     $data_tes_soal['tessoal_ragu'] = 0;

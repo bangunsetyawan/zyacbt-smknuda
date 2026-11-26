@@ -352,6 +352,7 @@ class Tes_dashboard extends Tes_Controller {
 							$this->db->trans_start();
 
 							// 1. Memasukkan data ke test_user
+							$net_mulai = $this->access_tes->record_activity_network($username, 'MULAI_TES', 'Tes ID '.$tes_id);
 							$data_tes['tesuser_tes_id'] = $tes_id;
 							$data_tes['tesuser_user_id'] = $user_id;
 							$data_tes['tesuser_status'] = 1;
@@ -378,6 +379,7 @@ class Tes_dashboard extends Tes_Controller {
 									foreach ($query_soal as $soal) {
 										// Memasukkan data soal ke table tests_logs
 										$data_soal['tessoal_tesuser_id'] = $tests_users_id;
+										$data_soal['tessoal_user_ip'] = isset($net_mulai['tag']) ? $net_mulai['tag'] : null;
 										$data_soal['tessoal_soal_id'] = $soal->soal_id;
 										//$data_soal['tessoal_nilai'] = 0;
 										$data_soal['tessoal_nilai'] = $query_tes->tes_score_unanswered;

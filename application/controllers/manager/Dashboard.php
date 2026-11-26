@@ -8,6 +8,10 @@ class Dashboard extends Member_Controller {
 	}
     
     public function index(){
+        if($this->access->get_level() === 'operator-tes'){
+            redirect('manager/tes_hasil_operator');
+            return;
+        }
         $this->load->helper('form');
         $data['nama'] = $this->access->get_nama();
 
