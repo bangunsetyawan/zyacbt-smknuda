@@ -18,11 +18,91 @@
         border-radius: 6px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.12);
     }
+
+    /* Grid Kartu Ruang 1-Tap (Mobile-First) */
+    .ruang-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+    @media (min-width: 768px) {
+        .ruang-grid {
+            grid-template-columns: repeat(5, 1fr);
+        }
+    }
+    .ruang-card-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 12px 6px;
+        background: #f8fafc;
+        border: 2px solid #cbd5e1;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.12s ease;
+        min-height: 64px;
+        user-select: none;
+    }
+    .ruang-card-btn:active, .ruang-card-btn:hover {
+        border-color: #16a34a;
+        background: #f0fdf4;
+    }
+    .ruang-card-btn.is-active {
+        background: #16a34a;
+        border-color: #15803d;
+        color: #ffffff;
+        box-shadow: 0 2px 6px rgba(22, 163, 74, 0.35);
+    }
+    .ruang-card-title {
+        font-size: 14px;
+        font-weight: 800;
+        line-height: 1.2;
+    }
+    .ruang-card-count {
+        font-size: 11.5px;
+        font-weight: 600;
+        opacity: 0.82;
+        margin-top: 3px;
+    }
+    .ruang-card-btn.is-admin-all {
+        grid-column: 1 / -1;
+        flex-direction: row;
+        gap: 8px;
+        min-height: 46px;
+        padding: 10px 12px;
+        background: #fef2f2;
+        border-color: #fca5a5;
+        color: #991b1b;
+    }
+    .ruang-card-btn.is-admin-all.is-active {
+        background: #dc2626;
+        border-color: #b91c1c;
+        color: #ffffff;
+    }
+    .ruang-aktif-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        background: #f0fdf4;
+        border: 1.5px solid #86efac;
+        border-radius: 6px;
+        padding: 8px 12px;
+        margin-bottom: 10px;
+    }
+    .ruang-aktif-label {
+        font-size: 14px;
+        font-weight: 700;
+        color: #14532d;
+    }
+
     .pengawas-summary-grid {
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
-        margin-bottom: 14px;
+        margin-bottom: 12px;
     }
     .pengawas-stat-card {
         flex: 1 1 calc(25% - 8px);
@@ -97,7 +177,7 @@
         flex-wrap: wrap;
     }
     .siswa-nama {
-        font-size: 15px;
+        font-size: 15.5px;
         font-weight: 700;
         color: #111827;
         margin: 0;
@@ -132,13 +212,50 @@
         white-space: nowrap;
     }
 
+    /* Kotak Sorotan Jam Kejadian & Aksi Terakhir Besar (Bagian D #1) */
+    .siswa-waktu-highlight {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px 12px;
+        margin-top: 10px;
+        padding: 8px 12px;
+        border-radius: 6px;
+        background: #ffffff;
+        border: 1.5px solid #cbd5e1;
+    }
+    .siswa-card.warna-merah .siswa-waktu-highlight {
+        background: #fff5f5;
+        border-color: #fca5a5;
+    }
+    .siswa-card.warna-kuning .siswa-waktu-highlight {
+        background: #fffdf0;
+        border-color: #fcd34d;
+    }
+    .waktu-jam-besar {
+        font-size: 19px;
+        font-weight: 800;
+        letter-spacing: 0.3px;
+        color: #111827;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+    }
+    .siswa-card.warna-merah .waktu-jam-besar { color: #b91c1c; }
+    .siswa-card.warna-kuning .waktu-jam-besar { color: #b45309; }
+    .waktu-aksi-label {
+        font-size: 13.5px;
+        font-weight: 600;
+        color: #1f2937;
+    }
+
     .siswa-meta-row {
         display: flex;
         flex-wrap: wrap;
-        gap: 8px 16px;
+        gap: 6px 16px;
         margin-top: 8px;
         padding-top: 8px;
-        border-top: 1px dashed rgba(0,0,0,0.1);
+        border-top: 1px dashed rgba(0,0,0,0.12);
         font-size: 12.5px;
         color: #1f2937;
     }
@@ -160,7 +277,10 @@
             flex: 1 1 calc(50% - 8px);
         }
         .siswa-nama {
-            font-size: 14.5px;
+            font-size: 15px;
+        }
+        .waktu-jam-besar {
+            font-size: 18px;
         }
     }
 </style>
@@ -171,7 +291,7 @@
         <div class="col-xs-12">
             <div class="box box-success" style="margin-bottom: 12px;">
                 <div class="box-header with-border">
-                    <h3 class="box-title"><i class="fa fa-map-marker"></i> Filter Ruang Ujian</h3>
+                    <h3 class="box-title"><i class="fa fa-map-marker"></i> Pilih Ruang Ujian (1-Tap)</h3>
                     <div class="box-tools pull-right">
                         <span id="indikator-live" class="label label-default" style="font-size:11.5px; padding:4px 8px;">
                             <i class="fa fa-circle-o"></i> Pilih Ruang (<span id="jam-update">-</span>)
@@ -179,22 +299,43 @@
                     </div>
                 </div>
                 <div class="box-body">
-                    <!-- Tombol Segarkan Besar & Jelas di Atas Area Filter -->
-                    <div class="row" style="margin-bottom: 12px;">
+                    <!-- Bar Ruang Aktif (tampil setelah ruang dipilih agar kartu siswa langsung terlihat tanpa scroll) -->
+                    <div id="bar-ruang-aktif" class="ruang-aktif-bar" style="display:none;">
+                        <div class="ruang-aktif-label">
+                            <i class="fa fa-map-marker text-success"></i> <span id="teks-ruang-aktif">-</span>
+                        </div>
+                        <button type="button" id="btn-ganti-ruang" class="btn btn-sm btn-default" onclick="tampilkan_grid_ruang(true)">
+                            <i class="fa fa-th-large"></i> Ganti Ruang
+                        </button>
+                    </div>
+
+                    <!-- Grid Kartu Ruang (Ketuk 1x langsung memantau ruang tersebut) -->
+                    <div id="wadah-grid-ruang" class="ruang-grid" style="margin-bottom: 10px;">
+                        <?php if(!empty($is_admin)): ?>
+                        <button type="button" class="ruang-card-btn is-admin-all" data-ruang="semua_masalah" data-label="Semua Ruang (Merah & Kuning)" onclick="pilih_ruang(this)">
+                            <span class="ruang-card-title"><i class="fa fa-globe"></i> Semua Ruang (Khusus Merah &amp; Kuning)</span>
+                        </button>
+                        <?php endif; ?>
+                        <?php if(!empty($ruang_list)): foreach($ruang_list as $rl): ?>
+                        <button type="button" class="ruang-card-btn" data-ruang="<?php echo html_escape($rl['kode']); ?>" data-label="<?php echo html_escape($rl['label']).' ('.(int)$rl['jumlah'].' siswa)'; ?>" onclick="pilih_ruang(this)">
+                            <span class="ruang-card-title"><?php echo html_escape($rl['label']); ?></span>
+                            <span class="ruang-card-count"><?php echo (int)$rl['jumlah']; ?> siswa</span>
+                        </button>
+                        <?php endforeach; else: ?>
+                        <div class="text-muted" style="grid-column: 1 / -1; padding:8px 0;">Belum ada daftar ruang terisi di data peserta.</div>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- Tombol Segarkan Besar & Jelas (Muncul atau aktif saat ruang dipilih) -->
+                    <div class="row" id="wadah-tombol-segarkan" style="display:none;">
                         <div class="col-xs-12">
                             <button type="button" id="btn-refresh-manual" class="btn btn-success btn-block btn-segarkan-besar">
                                 <i class="fa fa-refresh" id="ikon-segarkan"></i> <span id="teks-segarkan">Segarkan Data Sekarang</span>
                             </button>
                         </div>
                     </div>
-                    <div class="row">
-                        <div class="col-xs-12" style="margin-bottom:4px;">
-                            <label style="font-size:13px; margin-bottom:4px;"><i class="fa fa-map-marker"></i> Pilih Ruang Ujian</label>
-                            <select id="filter-ruang" class="form-control">
-                                <?php if(!empty($select_ruang)){ echo $select_ruang; } ?>
-                            </select>
-                        </div>
-                    </div>
+
+                    <input type="hidden" id="filter-ruang" value="">
                     <input type="hidden" id="filter-warna" value="masalah">
                 </div>
             </div>
@@ -252,6 +393,35 @@
             .replace(/'/g, '&#039;');
     }
 
+    function tampilkan_grid_ruang(tampil){
+        if(tampil){
+            $('#wadah-grid-ruang').show();
+            $('#bar-ruang-aktif').hide();
+        }else{
+            $('#wadah-grid-ruang').hide();
+            $('#bar-ruang-aktif').show();
+        }
+    }
+
+    function pilih_ruang(btnEl){
+        var $btn = $(btnEl);
+        var ruang = $btn.data('ruang') || '';
+        var label = $btn.data('label') || ruang;
+
+        $('.ruang-card-btn').removeClass('is-active');
+        $btn.addClass('is-active');
+
+        $('#filter-ruang').val(ruang);
+        $('#teks-ruang-aktif').text(label);
+        $('#wadah-tombol-segarkan').show();
+        tampilkan_grid_ruang(false);
+
+        retryAwalDone = false;
+        $('#filter-warna').val('masalah');
+        update_mode_banner();
+        muat_data_pantau(true);
+    }
+
     function update_mode_banner(){
         var aktif = $('#filter-warna').val();
         $('.pengawas-stat-card').removeClass('active-filter');
@@ -284,7 +454,7 @@
         }
         if(ruang === 'semua_masalah' && (warna === 'hijau' || warna === 'belum')){
             if(typeof notify_info === 'function'){
-                notify_info('Mode "Semua Ruang" hanya menampilkan kartu Merah & Kuning agar ringan. Pilih satu ruang tertentu untuk melihat Hijau/Belum.');
+                notify_info('Mode "Semua Ruang" hanya menampilkan kartu Merah & Kuning agar ringan. Ketuk Ganti Ruang untuk melihat Hijau/Belum per ruang.');
             }
             return;
         }
@@ -310,6 +480,9 @@
 
     function reset_tampilan_kosong(){
         $('#wadah-ringkasan').hide();
+        $('#wadah-tombol-segarkan').hide();
+        $('#bar-ruang-aktif').hide();
+        $('#wadah-grid-ruang').show();
         $('#wadah-daftar-siswa').html('');
         $('#indikator-live')
             .removeClass('label-success')
@@ -321,9 +494,6 @@
         var ruang = $('#filter-ruang').val();
         if(!ruang || ruang === ''){
             reset_tampilan_kosong();
-            if(isManual && typeof notify_info === 'function'){
-                notify_info('Silahkan pilih Ruang Ujian terlebih dahulu.');
-            }
             return;
         }
         if(sedangMemuat) return;
@@ -426,12 +596,19 @@
                                 + '<span class="badge-net ' + badgeClass + '"><i class="fa ' + badgeIcon + '"></i> ' + esc_html(it.badge_label) + '</span>'
                                 + (it.anomali_count > 0 ? '<br><span class="badge-anomali"><i class="fa fa-exchange"></i> ' + esc_html(it.anomali_count) + 'x Pindah/Keluar Jalur</span>' : '')
                             + '</div>'
-                        + '</div>'
-                        + '<div class="siswa-meta-row">'
+                        + '</div>';
+
+                    // Jam & Aksi Terakhir Besar agar mudah membedakan pelanggaran vs human error / selesai
+                    html += '<div class="siswa-waktu-highlight">'
+                        + '<div class="waktu-jam-besar"><i class="fa fa-clock-o"></i> ' + esc_html(it.jam_kejadian || it.waktu_aktivitas || '-') + ' WIB</div>'
+                        + '<div class="waktu-aksi-label">' + esc_html(it.aksi_terakhir || '-') + '</div>'
+                        + '</div>';
+
+                    html += '<div class="siswa-meta-row">'
                             + '<div><i class="fa fa-tasks text-muted"></i> <b>Status:</b> ' + statusBadge + ' (' + esc_html(it.progres) + ')</div>'
                             + '<div><i class="fa fa-book text-muted"></i> <b>Tes:</b> ' + esc_html(it.tes_nama) + '</div>'
                             + '<div><i class="fa fa-wifi text-muted"></i> <b>IP Asal:</b> <code>' + esc_html(it.ip) + '</code> (' + esc_html(it.jalur) + ')</div>'
-                            + '<div><i class="fa fa-history text-muted"></i> <b>Mulai:</b> ' + esc_html(it.waktu_mulai) + ' &bull; <b>Aktivitas Terakhir:</b> ' + esc_html(it.waktu_aktivitas) + '</div>'
+                            + '<div><i class="fa fa-history text-muted"></i> <b>Mulai:</b> ' + esc_html(it.waktu_mulai) + '</div>'
                         + '</div>';
 
                     if(it.catatan_log && it.catatan_log !== ''){
@@ -460,13 +637,6 @@
     $(function(){
         update_mode_banner();
         reset_tampilan_kosong();
-
-        $('#filter-ruang').change(function(){
-            retryAwalDone = false;
-            $('#filter-warna').val('masalah');
-            update_mode_banner();
-            muat_data_pantau(true);
-        });
 
         $('#btn-refresh-manual').click(function(){
             muat_data_pantau(true);

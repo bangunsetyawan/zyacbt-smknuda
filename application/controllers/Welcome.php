@@ -134,6 +134,7 @@ class Welcome extends CI_Controller {
 		$data['user_login']=0;
 		$username = $this->access_tes->get_username();
 		if(!empty($username)){
+			$this->access_tes->record_activity_network($username, 'LOGOUT');
 			$this->cbt_user_model->update('user_name', $username, $data);
 		}
 		

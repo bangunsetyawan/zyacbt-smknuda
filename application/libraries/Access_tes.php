@@ -188,7 +188,7 @@ class Access_tes{
 				if($prev_mode === 'LAN'){
 					$should_log = true;
 					$log_msg = 'PINDAH KE PAKET DATA/PUBLIK ['.$aksi.']: dari '.$prev_tag.' ke '.$net['tag'].' via '.$net['host'].$ket_suffix;
-				}elseif($aksi === 'LOGIN' || $aksi === 'MULAI_TES' || $prev_tag !== $net['tag']){
+				}elseif($aksi === 'LOGIN' || $aksi === 'MULAI_TES' || $aksi === 'SELESAI' || $aksi === 'LOGOUT' || $prev_tag !== $net['tag']){
 					$should_log = true;
 					$log_msg = 'AKSES PAKET DATA/PUBLIK ['.$aksi.']: '.$net['tag'].' via '.$net['host'].$ket_suffix;
 				}

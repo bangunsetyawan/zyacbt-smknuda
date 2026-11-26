@@ -227,6 +227,7 @@ class Tes_kerjakan extends Tes_Controller {
             if(!empty($centang)){
                 $data_tes['tesuser_status']=4;
                 $this->cbt_tes_user_model->update('tesuser_id', $tesuser_id, $data_tes);
+                $this->access_tes->record_activity_network($this->username, 'SELESAI', 'Tes User '.$tesuser_id);
 
                 $status['status'] = 1;
                 $status['pesan'] = "Tes berhasil dihentikan";   

@@ -185,9 +185,11 @@
 		position: relative;
 		box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
 	}
-	.cbt-opt-card:hover {
-		border-color: #00a65a;
-		background: #f4fbf7;
+	@media (hover: hover) {
+		.cbt-opt-card:hover {
+			border-color: #64748b;
+			background: #f8fafc;
+		}
 	}
 	.cbt-opt-card input[type="radio"] {
 		position: absolute;

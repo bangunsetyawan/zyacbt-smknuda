@@ -25,33 +25,42 @@ class Tes_hasil_operator extends Member_Controller {
 
         $is_admin = ($this->access->get_level() === 'admin');
 
-        // 1. Dropdown Ruang (dari cbt_user.user_detail / Keterangan)
-        // Default kosong agar layar pengawas & admin bersih sebelum memilih ruang
-        $select_ruang = '<option value="" selected="selected">-- Pilih Ruang Ujian --</option>';
-        if($is_admin){
-            $select_ruang .= '<option value="semua_masalah">Semua Ruang (Khusus Merah &amp; Kuning)</option>';
-        }
+        // 1. Daftar Ruang untuk Kartu Ruang (dari cbt_user.user_detail / Keterangan)
+        $ruang_list = array();
         $q_ruang = $this->db->select('user_detail, COUNT(*) AS jml')
                             ->from('cbt_user')
                             ->where('user_detail IS NOT NULL', null, false)
                             ->where("TRIM(user_detail) !=", '')
                             ->group_by('user_detail')
-                            ->order_by('user_detail', 'ASC')
                             ->get();
         if($q_ruang->num_rows() > 0){
-            foreach($q_ruang->result() as $r){
+            $raw_rooms = $q_ruang->result();
+            usort($raw_rooms, function($a, $b){
+                return strnatcasecmp(trim((string)$a->user_detail), trim((string)$b->user_detail));
+            });
+            foreach($raw_rooms as $r){
                 $r_val = trim((string)$r->user_detail);
                 if($r_val !== ''){
-                    $select_ruang .= '<option value="'.html_escape($r_val).'">'.html_escape($r_val).' ('.(int)$r->jml.' siswa)</option>';
+                    $ruang_list[] = array(
+                        'kode'   => $r_val,
+                        'label'  => $r_val,
+                        'jumlah' => (int)$r->jml
+                    );
                 }
             }
         }
         $jml_tanpa_ruang = (int)$this->db->where("(user_detail IS NULL OR TRIM(user_detail) = '')", null, false)
                                          ->count_all_results('cbt_user');
         if($jml_tanpa_ruang > 0){
-            $select_ruang .= '<option value="__tanpa_ruang__">[Belum Diatur Ruang] ('.$jml_tanpa_ruang.' siswa)</option>';
+            $ruang_list[] = array(
+                'kode'   => '__tanpa_ruang__',
+                'label'  => 'Belum Diatur Ruang',
+                'jumlah' => $jml_tanpa_ruang
+            );
         }
-        $data['select_ruang'] = $select_ruang;
+
+        $data['is_admin'] = $is_admin;
+        $data['ruang_list'] = $ruang_list;
         
         $this->template->display_admin($this->kelompok.'/tes_hasil_operator_view', 'Pantau Ruang Pengawas', $data);
     }
@@ -205,7 +214,8 @@ class Tes_hasil_operator extends Member_Controller {
                             'kembali_count' => 0,
                             'has_pub' => false,
                             'last_log' => $lg->log,
-                            'last_ts' => date('H:i:s', strtotime($lg->ts))
+                            'last_ts' => date('H:i:s', strtotime($lg->ts)),
+                            'last_ts_raw' => $lg->ts
                         );
                     }
                     $log_by_username[$uname]['count']++;
@@ -346,6 +356,63 @@ class Tes_hasil_operator extends Member_Controller {
                 continue;
             }
 
+            // Tentukan Jam Kejadian Besar & Aksi Terakhir yang Jelas (Login / Mulai Tes / Simpan Jawaban / Selesai / Logout)
+            $latest_ts_int = 0;
+            $jam_kejadian = '-';
+            $aksi_terakhir = 'Belum ada aktivitas tercatat';
+
+            if($sesi){
+                $t_mulai_int = strtotime($sesi->tesuser_creation_time);
+                if($t_mulai_int > $latest_ts_int){
+                    $latest_ts_int = $t_mulai_int;
+                    $jam_kejadian = date('H:i:s', $t_mulai_int);
+                    $aksi_terakhir = 'Mulai Tes ('.$tes_nama.')';
+                }
+                if(!empty($sesi->last_answer_time)){
+                    $t_ans_int = strtotime($sesi->last_answer_time);
+                    if($t_ans_int >= $latest_ts_int){
+                        $latest_ts_int = $t_ans_int;
+                        $jam_kejadian = date('H:i:s', $t_ans_int);
+                        $aksi_terakhir = ($status_kode === 'selesai')
+                            ? 'Selesai / Kirim Jawaban Terakhir ('.$terjawab.'/'.$total_soal.' soal)'
+                            : 'Simpan Jawaban ('.$terjawab.'/'.$total_soal.' soal terjawab)';
+                    }
+                }
+                if((int)$sesi->tesuser_status === 4 && strpos($aksi_terakhir, 'Selesai') === false){
+                    $aksi_terakhir .= ' • Status: Selesai Dikerjakan';
+                }
+            }
+
+            if($ulog && !empty($ulog['last_ts_raw'])){
+                $t_log_int = strtotime($ulog['last_ts_raw']);
+                if($t_log_int >= $latest_ts_int){
+                    $latest_ts_int = $t_log_int;
+                    $jam_kejadian = date('H:i:s', $t_log_int);
+                    $log_str = (string)$ulog['last_log'];
+                    $aksi_kode = '';
+                    if(preg_match('/\[([A-Z_]+)\]/', $log_str, $m_aksi)){
+                        $aksi_kode = $m_aksi[1];
+                    }
+                    $jalur_label = (strpos($log_str, 'KEMBALI KE LAN') === 0) ? 'Kembali ke LAN' : 'via Paket Data / Publik';
+                    if($aksi_kode === 'LOGIN'){
+                        $aksi_terakhir = 'Login '.$jalur_label;
+                    }elseif($aksi_kode === 'MULAI_TES'){
+                        $aksi_terakhir = 'Mulai Tes '.$jalur_label;
+                    }elseif($aksi_kode === 'JAWAB'){
+                        $aksi_terakhir = 'Simpan Jawaban '.$jalur_label;
+                    }elseif($aksi_kode === 'SELESAI'){
+                        $aksi_terakhir = 'Klik Selesai Ujian '.$jalur_label;
+                    }elseif($aksi_kode === 'LOGOUT'){
+                        $aksi_terakhir = 'Logout '.$jalur_label;
+                    }else{
+                        $aksi_terakhir = 'Aktivitas Jaringan ('.$jalur_label.')';
+                    }
+                    if($sesi && $status_kode === 'selesai' && $aksi_kode !== 'SELESAI'){
+                        $aksi_terakhir .= ' • Sesi Selesai';
+                    }
+                }
+            }
+
             $anomali_count = $ulog ? (int)$ulog['count'] : 0;
             $anomali_pub = $ulog ? (int)$ulog['pub_count'] : 0;
             $anomali_kembali = $ulog ? (int)$ulog['kembali_count'] : 0;
@@ -384,6 +451,8 @@ class Tes_hasil_operator extends Member_Controller {
                 'progres'         => $progres_teks,
                 'waktu_mulai'     => $waktu_mulai,
                 'waktu_aktivitas' => $waktu_aktivitas,
+                'jam_kejadian'    => $jam_kejadian,
+                'aksi_terakhir'   => $aksi_terakhir,
                 'anomali_count'   => $anomali_count,
                 'anomali_summary' => $anomali_summary,
                 'catatan_log'     => $catatan_log,
