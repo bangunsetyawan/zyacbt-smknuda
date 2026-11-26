@@ -98,8 +98,8 @@ class Tes_hasil_operator extends Member_Controller {
                 ));
                 return;
             }
-            // Mode lintas-ruang admin: wajib hanya Merah & Kuning (kecuali sedang mencari nama/NISN spesifik)
-            if($search === ''){
+            // Mode lintas-ruang admin: izinkan filter 'masalah' (Merah+Kuning), 'merah', atau 'kuning' saja
+            if(!in_array($filter_warna, array('masalah', 'merah', 'kuning'), true)){
                 $filter_warna = 'masalah';
             }
         }
@@ -201,6 +201,8 @@ class Tes_hasil_operator extends Member_Controller {
                     if(!isset($log_by_username[$uname])){
                         $log_by_username[$uname] = array(
                             'count' => 0,
+                            'pub_count' => 0,
+                            'kembali_count' => 0,
                             'has_pub' => false,
                             'last_log' => $lg->log,
                             'last_ts' => date('H:i:s', strtotime($lg->ts))
@@ -209,6 +211,10 @@ class Tes_hasil_operator extends Member_Controller {
                     $log_by_username[$uname]['count']++;
                     if(strpos($lg->log, 'PAKET DATA') !== false || strpos($lg->log, 'PUB|') !== false){
                         $log_by_username[$uname]['has_pub'] = true;
+                        $log_by_username[$uname]['pub_count']++;
+                    }
+                    if(strpos($lg->log, 'KEMBALI KE LAN') !== false){
+                        $log_by_username[$uname]['kembali_count']++;
                     }
                 }
             }
@@ -341,6 +347,21 @@ class Tes_hasil_operator extends Member_Controller {
                 continue;
             }
 
+            $anomali_count = $ulog ? (int)$ulog['count'] : 0;
+            $anomali_pub = $ulog ? (int)$ulog['pub_count'] : 0;
+            $anomali_kembali = $ulog ? (int)$ulog['kembali_count'] : 0;
+            $anomali_summary = '';
+            if($anomali_count > 0){
+                $rincian = array();
+                if($anomali_pub > 0){
+                    $rincian[] = $anomali_pub.'x Paket Data';
+                }
+                if($anomali_kembali > 0){
+                    $rincian[] = $anomali_kembali.'x Kembali LAN';
+                }
+                $anomali_summary = $anomali_count.'x Pindah/Keluar Jalur'.(!empty($rincian) ? ' ('.implode(', ', $rincian).')' : '');
+            }
+
             $catatan_log = '';
             if($ulog && !empty($ulog['last_log'])){
                 $catatan_log = $ulog['last_ts'].' — '.$ulog['last_log'];
@@ -364,6 +385,8 @@ class Tes_hasil_operator extends Member_Controller {
                 'progres'         => $progres_teks,
                 'waktu_mulai'     => $waktu_mulai,
                 'waktu_aktivitas' => $waktu_aktivitas,
+                'anomali_count'   => $anomali_count,
+                'anomali_summary' => $anomali_summary,
                 'catatan_log'     => $catatan_log,
                 'sort_priority'   => $sort_priority
             );

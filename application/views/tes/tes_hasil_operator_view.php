@@ -120,6 +120,17 @@
     .badge-net.net-kuning { background-color: #d97706; }
     .badge-net.net-hijau { background-color: #16a34a; }
     .badge-net.net-belum { background-color: #6b7280; }
+    .badge-anomali {
+        display: inline-block;
+        margin-top: 4px;
+        padding: 3px 8px;
+        font-size: 11.5px;
+        font-weight: 700;
+        border-radius: 4px;
+        background-color: #1f2937;
+        color: #fff;
+        white-space: nowrap;
+    }
 
     .siswa-meta-row {
         display: flex;
@@ -177,15 +188,11 @@
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-sm-6 col-xs-12" style="margin-bottom:8px;">
+                        <div class="col-xs-12" style="margin-bottom:4px;">
                             <label style="font-size:13px; margin-bottom:4px;"><i class="fa fa-map-marker"></i> Pilih Ruang Ujian</label>
                             <select id="filter-ruang" class="form-control">
                                 <?php if(!empty($select_ruang)){ echo $select_ruang; } ?>
                             </select>
-                        </div>
-                        <div class="col-sm-6 col-xs-12" style="margin-bottom:4px;">
-                            <label style="font-size:13px; margin-bottom:4px;"><i class="fa fa-search"></i> Cari Nama / NISN Peserta</label>
-                            <input type="text" id="filter-q" class="form-control" placeholder="Ketik nama atau NISN siswa...">
                         </div>
                     </div>
                     <input type="hidden" id="filter-warna" value="masalah">
@@ -334,7 +341,6 @@
             data: {
                 ruang: ruang,
                 warna: $('#filter-warna').val(),
-                q:     $('#filter-q').val(),
                 _t:    new Date().getTime()
             },
             success: function(res){
@@ -363,11 +369,10 @@
                 $('#jml-total').text(res.summary.total || 0);
 
                 var items = res.items || [];
-                var qVal = $.trim($('#filter-q').val());
                 var modeWarna = $('#filter-warna').val();
 
                 if(items.length === 0){
-                    if(modeWarna === 'masalah' && qVal === ''){
+                    if(modeWarna === 'masalah'){
                         $('#wadah-daftar-siswa').html(
                             '<div class="callout callout-success" style="margin-bottom:0;">' +
                             '<i class="fa fa-check-circle"></i> <b>Ruang Aman (0 Merah, 0 Kuning):</b> Tidak ada pelanggaran jaringan di ruang ini. ' +
@@ -377,7 +382,7 @@
                     }else{
                         $('#wadah-daftar-siswa').html(
                             '<div class="box box-solid"><div class="box-body text-center text-muted" style="padding:20px;">' +
-                            '<i class="fa fa-info-circle"></i> Tidak ada peserta yang cocok dengan filter ini.' +
+                            '<i class="fa fa-info-circle"></i> Tidak ada peserta dengan status <b>' + esc_html(modeWarna.toUpperCase()) + '</b> di ruang ini.' +
                             '</div></div>'
                         );
                     }
@@ -417,8 +422,9 @@
                                     + ' &bull; <b>Ruang:</b> ' + esc_html(it.ruang)
                                 + '</div>'
                             + '</div>'
-                            + '<div>'
+                            + '<div style="text-align:right;">'
                                 + '<span class="badge-net ' + badgeClass + '"><i class="fa ' + badgeIcon + '"></i> ' + esc_html(it.badge_label) + '</span>'
+                                + (it.anomali_count > 0 ? '<br><span class="badge-anomali"><i class="fa fa-exchange"></i> ' + esc_html(it.anomali_count) + 'x Pindah/Keluar Jalur</span>' : '')
                             + '</div>'
                         + '</div>'
                         + '<div class="siswa-meta-row">'
@@ -429,7 +435,8 @@
                         + '</div>';
 
                     if(it.catatan_log && it.catatan_log !== ''){
-                        html += '<div class="siswa-log-alert"><i class="fa fa-bell"></i> <b>Bukti Log Jaringan:</b> ' + esc_html(it.catatan_log) + '</div>';
+                        var prefixAnomali = (it.anomali_summary && it.anomali_summary !== '') ? ' (' + esc_html(it.anomali_summary) + ')' : '';
+                        html += '<div class="siswa-log-alert"><i class="fa fa-bell"></i> <b>Bukti Log Jaringan' + prefixAnomali + ':</b> ' + esc_html(it.catatan_log) + '</div>';
                     }
 
                     html += '</div>';
@@ -459,15 +466,6 @@
             $('#filter-warna').val('masalah');
             update_mode_banner();
             muat_data_pantau(true);
-        });
-
-        var searchTimeout = null;
-        $('#filter-q').on('keyup input', function(){
-            if($('#filter-ruang').val() === '') return;
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(function(){
-                muat_data_pantau(false);
-            }, 350);
         });
 
         $('#btn-refresh-manual').click(function(){
