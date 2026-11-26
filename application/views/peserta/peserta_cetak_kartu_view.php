@@ -3,7 +3,10 @@
 <head>
 	<meta charset="utf-8">
 	<title>Kartu Login Ujian | <?php echo html_escape($cbt_nama); ?></title>
-	<link rel="shortcut icon" href="<?php echo base_url(); ?>favicon.ico" type="image/x-icon" />
+	<link rel="icon" type="image/png" sizes="32x32" href="<?php echo base_url(); ?>favicon-32x32.png?v=2.0" />
+	<link rel="icon" type="image/png" sizes="16x16" href="<?php echo base_url(); ?>favicon-16x16.png?v=2.0" />
+	<link rel="shortcut icon" href="<?php echo base_url(); ?>favicon.ico?v=2.0" type="image/x-icon" />
+	<link rel="apple-touch-icon" href="<?php echo base_url(); ?>icons/apple-touch-icon.png?v=2.0" />
 	<style>
         * {
             box-sizing: border-box;
