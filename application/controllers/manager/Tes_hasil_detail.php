@@ -130,33 +130,63 @@ class Tes_hasil_detail extends Member_Controller {
 	            if($query_jawaban->num_rows()>0){
 	            	$query_jawaban = $query_jawaban->result();
 	            	$a = 0;
+	            	$is_answered = false;
+	            	$is_correct = false;
+	            	foreach ($query_jawaban as $j_chk) {
+	            		if((int)$j_chk->soaljawaban_selected === 1){
+	            			$is_answered = true;
+	            			if((int)$j_chk->jawaban_benar === 1){
+	            				$is_correct = true;
+	            			}
+	            		}
+	            	}
+	            	if(!$is_answered){
+	            		$status_soal_badge = '<span class="label label-default"><i class="fa fa-minus-circle"></i> Tidak Dijawab (Poin: '.$temp->tessoal_nilai.')</span>';
+	            	}elseif($is_correct){
+	            		$status_soal_badge = '<span class="label label-success"><i class="fa fa-check-circle"></i> Jawaban Benar (+'.$temp->tessoal_nilai.' Poin)</span>';
+	            	}else{
+	            		$status_soal_badge = '<span class="label label-danger"><i class="fa fa-times-circle"></i> Jawaban Salah (Poin: '.$temp->tessoal_nilai.')</span>';
+	            	}
+
 	            	$jawaban_table = $jawaban_table.'
 	            			<tr>
-		                      	<td width="5%"> </td>
-		                      	<td width="5%">Kunci</td>
-		                      	<td width="5%">Pilihan</td>
-		                      	<td width="85%">Jawaban</td>
+		                      	<td colspan="4" style="padding-top:4px;padding-bottom:6px;">'.$status_soal_badge.'</td>
+		                    </tr>
+	            			<tr style="background:#f8fafc;font-weight:bold;">
+		                      	<td width="5%">No</td>
+		                      	<td width="10%" class="text-center">Kunci</td>
+		                      	<td width="12%" class="text-center">Pilihan Siswa</td>
+		                      	<td width="73%">Opsi Jawaban</td>
 		                    </tr>
 	            		';
 	            	foreach ($query_jawaban as $jawaban) {
 	            		$temp_jawaban = $jawaban->jawaban_detail;
 						$temp_jawaban = str_replace("[base_url]", base_url(), $temp_jawaban);
 
-						$temp_benar = '';
-						if($jawaban->jawaban_benar==1){
-							$temp_benar = '<b>1</b>';
-						}
-						$temp_pilihan = '';
-						if($jawaban->soaljawaban_selected==1){
-							$temp_pilihan = '<b>1</b>';
+						$is_kunci = ((int)$jawaban->jawaban_benar === 1);
+						$is_dipilih = ((int)$jawaban->soaljawaban_selected === 1);
+
+						$temp_benar = $is_kunci
+							? '<span class="label label-success"><i class="fa fa-key"></i> Kunci</span>'
+							: '<span class="text-muted">-</span>';
+
+						if($is_dipilih && $is_kunci){
+							$temp_pilihan = '<span class="label label-success"><i class="fa fa-check"></i> Dipilih</span>';
+							$row_style = ' style="background-color:#f0fdf4;"';
+						}elseif($is_dipilih && !$is_kunci){
+							$temp_pilihan = '<span class="label label-danger"><i class="fa fa-times"></i> Dipilih</span>';
+							$row_style = ' style="background-color:#fef2f2;"';
+						}else{
+							$temp_pilihan = '<span class="text-muted">-</span>';
+							$row_style = $is_kunci ? ' style="background-color:#f8fafc;"' : '';
 						}
 
 	            		$jawaban_table = $jawaban_table.'
-	            			<tr>
+	            			<tr'.$row_style.'>
 		                      	<td width="5%">'.++$a.'.</td>
-		                      	<td width="5%">'.$temp_benar.'</td>
-		                      	<td width="5%">'.$temp_pilihan.'</td>
-		                      	<td width="85%">'.$temp_jawaban.'</td>
+		                      	<td width="10%" class="text-center">'.$temp_benar.'</td>
+		                      	<td width="12%" class="text-center">'.$temp_pilihan.'</td>
+		                      	<td width="73%">'.$temp_jawaban.'</td>
 		                    </tr>
 	            		';
 	            	}
@@ -164,29 +194,29 @@ class Tes_hasil_detail extends Member_Controller {
             }else if($temp->soal_tipe==2){
             	// Jika soal adalah soal essay
             	$jawaban_table = $jawaban_table.'
-            		<tr>
+            		<tr style="background:#f8fafc;font-weight:bold;">
 		            	<td width="5%"></td>
-		                <td width="5%">Skor</td>
-		                <td width="90%" colspan="2">Jawaban</td>
+		                <td width="10%" class="text-center">Skor</td>
+		                <td width="85%" colspan="2">Jawaban Esai Siswa</td>
 		            </tr>
 	            	<tr>
 		            	<td width="5%"></td>
-		                <td width="5%">'.$temp->tessoal_nilai.'</td>
-		                <td width="90%" colspan="2"><div style="width:100%;"><pre style="white-space: pre-wrap;word-wrap: break-word;">'.htmlspecialchars((string)$temp->tessoal_jawaban_text, ENT_QUOTES, 'UTF-8').'</pre></div></td>
+		                <td width="10%" class="text-center"><span class="badge bg-blue">'.$temp->tessoal_nilai.'</span></td>
+		                <td width="85%" colspan="2"><div style="width:100%;"><pre style="white-space: pre-wrap;word-wrap: break-word;margin-bottom:0;">'.htmlspecialchars((string)$temp->tessoal_jawaban_text, ENT_QUOTES, 'UTF-8').'</pre></div></td>
 		            </tr>
 	            ';
             }else if($temp->soal_tipe==3){
             	// Jika soal adalah soal Jawaban Singkat
             	$jawaban_table = $jawaban_table.'
-            		<tr>
+            		<tr style="background:#f8fafc;font-weight:bold;">
 		            	<td width="5%"></td>
-		                <td width="5%">Skor</td>
-		                <td width="90%" colspan="2">Jawaban Singkat</td>
+		                <td width="10%" class="text-center">Skor</td>
+		                <td width="85%" colspan="2">Jawaban Singkat Siswa</td>
 		            </tr>
 	            	<tr>
 		            	<td width="5%"></td>
-		                <td width="5%">'.$temp->tessoal_nilai.'</td>
-		                <td width="90%" colspan="2"><div style="width:100%;">'.htmlspecialchars((string)$temp->tessoal_jawaban_text, ENT_QUOTES, 'UTF-8').'</div></td>
+		                <td width="10%" class="text-center"><span class="badge bg-blue">'.$temp->tessoal_nilai.'</span></td>
+		                <td width="85%" colspan="2"><div style="width:100%;">'.htmlspecialchars((string)$temp->tessoal_jawaban_text, ENT_QUOTES, 'UTF-8').'</div></td>
 		            </tr>
 	            ';
             }
