@@ -6,7 +6,7 @@
 	<link rel="icon" type="image/png" sizes="32x32" href="<?php echo base_url(); ?>favicon-32x32.png?v=2.0" />
 	<link rel="icon" type="image/png" sizes="16x16" href="<?php echo base_url(); ?>favicon-16x16.png?v=2.0" />
 	<link rel="shortcut icon" href="<?php echo base_url(); ?>favicon.ico?v=2.0" type="image/x-icon" />
-	<link rel="apple-touch-icon" href="<?php echo base_url(); ?>icons/apple-touch-icon.png?v=2.0" />
+	<link rel="apple-touch-icon" href="<?php echo base_url(); ?>apple-touch-icon.png?v=2.0" />
 	<style>
         * {
             box-sizing: border-box;

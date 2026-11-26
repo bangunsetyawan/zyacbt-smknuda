@@ -12,9 +12,9 @@
     <link rel="icon" type="image/png" sizes="32x32" href="<?php echo base_url(); ?>favicon-32x32.png?v=2.0" />
     <link rel="icon" type="image/png" sizes="16x16" href="<?php echo base_url(); ?>favicon-16x16.png?v=2.0" />
     <link rel="shortcut icon" href="<?php echo base_url(); ?>favicon.ico?v=2.0" type="image/x-icon" />
-    <link rel="icon" type="image/png" sizes="192x192" href="<?php echo base_url(); ?>icons/icon-192.png?v=2.0" />
-    <link rel="icon" type="image/png" sizes="512x512" href="<?php echo base_url(); ?>icons/icon-512.png?v=2.0" />
-    <link rel="apple-touch-icon" href="<?php echo base_url(); ?>icons/apple-touch-icon.png?v=2.0" />
+    <link rel="icon" type="image/png" sizes="192x192" href="<?php echo base_url(); ?>icon-192.png?v=2.0" />
+    <link rel="icon" type="image/png" sizes="512x512" href="<?php echo base_url(); ?>icon-512.png?v=2.0" />
+    <link rel="apple-touch-icon" href="<?php echo base_url(); ?>apple-touch-icon.png?v=2.0" />
     <meta property="og:title" content="<?php if(!empty($site_name)){ echo $site_name; } ?> | <?php echo $title; ?>" />
     <meta property="og:description" content="Ujian Online Berbasis Komputer SMK NU Darussalam" />
     <meta property="og:image" content="<?php echo base_url(); ?>og-preview.png" />
