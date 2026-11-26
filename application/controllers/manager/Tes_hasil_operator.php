@@ -209,12 +209,11 @@ class Tes_hasil_operator extends Member_Controller {
                         );
                     }
                     $log_by_username[$uname]['count']++;
-                    if(strpos($lg->log, 'PAKET DATA') !== false || strpos($lg->log, 'PUB|') !== false){
+                    if(strpos($lg->log, 'KEMBALI KE LAN') === 0){
+                        $log_by_username[$uname]['kembali_count']++;
+                    }elseif(strpos($lg->log, 'PAKET DATA') !== false || strpos($lg->log, 'PUB|') !== false){
                         $log_by_username[$uname]['has_pub'] = true;
                         $log_by_username[$uname]['pub_count']++;
-                    }
-                    if(strpos($lg->log, 'KEMBALI KE LAN') !== false){
-                        $log_by_username[$uname]['kembali_count']++;
                     }
                 }
             }
