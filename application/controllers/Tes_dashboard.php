@@ -264,7 +264,9 @@ class Tes_dashboard extends Tes_Controller {
 			$tes_id = (int)$this->input->post('tes-id', TRUE);
 			$token = strtoupper(trim((string)$this->input->post('token', TRUE)));
 			$ikrar_setuju = (int)$this->input->post('ikrar-setuju', TRUE);
-			$ikrar_teks = preg_replace('/\s+/', ' ', strtolower(trim((string)$this->input->post('ikrar-teks', TRUE))));
+			$ikrar_raw = strtolower(trim((string)$this->input->post('ikrar-teks', TRUE)));
+			$ikrar_clean = trim((string)preg_replace('/[^a-z\s]+/', ' ', $ikrar_raw));
+			$ikrar_teks = preg_replace('/\s+/', ' ', $ikrar_clean);
 
 			if($ikrar_setuju !== 1 || $ikrar_teks !== 'saya berjanji'){
 				$status['status'] = 0;

@@ -335,7 +335,7 @@
     $(function () {
         function normalizeIkrar(str) {
             if (!str) return '';
-            return $.trim(String(str).toLowerCase()).replace(/\s+/g, ' ');
+            return $.trim(String(str).toLowerCase().replace(/[^a-z\s]+/g, ' ')).replace(/\s+/g, ' ');
         }
 
         function checkIkrarValid() {
@@ -374,7 +374,8 @@
         });
 
         $('#ikrar-setuju').on('change click', checkIkrarValid);
-        $('#ikrar-teks').on('input keyup change', checkIkrarValid);
+        $('#ikrar-teks').on('input keyup change compositionend blur', checkIkrarValid);
+        setInterval(checkIkrarValid, 250);
         checkIkrarValid();
 
         $('#form-konfirmasi-tes').submit(function(){
