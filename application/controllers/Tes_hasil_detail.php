@@ -51,7 +51,9 @@ class Tes_hasil_detail extends Tes_Controller {
         		$data['user_nama'] = $query_user->user_firstname;
 
         		$nilai = $this->cbt_tes_soal_model->get_nilai($tesuser_id)->row();
-        		$data['nilai'] = $nilai->hasil.'  /  '.$query_test->tes_max_score.'  (nilai / nilai maksimal) ';
+        		$max_tampil = ((int)$nilai->non_pg_count === 0 && (int)$nilai->total_soal > 0) ? '100' : rtrim(rtrim(number_format((float)$query_test->tes_max_score, 2, '.', ''), '0'), '.');
+        		$hasil_tampil = rtrim(rtrim(number_format((float)$nilai->hasil, 2, '.', ''), '0'), '.');
+        		$data['nilai'] = $hasil_tampil.'  /  '.$max_tampil.'  (nilai / nilai maksimal) ';
 
         		$data['benar'] = ($nilai->total_soal-$nilai->jawaban_salah).'  /  '.$nilai->total_soal.'  (jawaban benar / total soal)';
 

@@ -152,7 +152,9 @@ class Tes_hasil_operator extends Member_Controller {
             $usernames[] = (string)$u->user_name;
         }
 
-        // Ambil sesi ujian terakhir per siswa (beserta progres soal terjawab / total soal & IP soal terakhir)
+        $today_date = date('Y-m-d');
+
+        // Ambil sesi ujian HARI INI saja per siswa (beserta progres soal terjawab / total soal & IP soal terakhir)
         $tes_cond = '';
         if($tes_id !== '' && $tes_id !== 'semua' && is_numeric($tes_id)){
             $tes_cond = ' AND tu.tesuser_tes_id = '.(int)$tes_id;
@@ -183,25 +185,25 @@ class Tes_hasil_operator extends Member_Controller {
             FROM cbt_tes_user tu
             INNER JOIN cbt_tes t ON t.tes_id = tu.tesuser_tes_id
             LEFT JOIN cbt_tes_soal ts ON ts.tessoal_tesuser_id = tu.tesuser_id
-            WHERE tu.tesuser_user_id IN ({$ids_csv}) {$tes_cond}
+            WHERE tu.tesuser_user_id IN ({$ids_csv})
+              AND DATE(tu.tesuser_creation_time) = ".$this->db->escape($today_date)." {$tes_cond}
             GROUP BY tu.tesuser_id
             ORDER BY tu.tesuser_id ASC
         ";
         $sesi_rows = $this->db->query($sql_sesi)->result();
         $sesi_by_user = array();
         foreach($sesi_rows as $sr){
-            // Simpan sesi paling baru untuk tiap user_id
+            // Simpan sesi paling baru untuk tiap user_id hari ini
             $sesi_by_user[(int)$sr->tesuser_user_id] = $sr;
         }
 
-        // Ambil riwayat pelanggaran / pindah jaringan di user_log hari ini untuk daftar username tersebut
-        $today_date = date('Y-m-d');
+        // Ambil riwayat pelanggaran / pindah jaringan di user_log HARI INI saja
         $log_by_username = array();
         if(!empty($usernames)){
             $this->db->select('username, log, ts')
                      ->from('user_log')
                      ->where_in('username', $usernames)
-                     ->where('DATE(ts) >=', $today_date)
+                     ->where('DATE(ts)', $today_date)
                      ->order_by('id', 'DESC');
             $q_logs = $this->db->get();
             if($q_logs && $q_logs->num_rows() > 0){
@@ -239,10 +241,16 @@ class Tes_hasil_operator extends Member_Controller {
             $sesi = isset($sesi_by_user[$uid]) ? $sesi_by_user[$uid] : null;
             $ulog = isset($log_by_username[$uname]) ? $log_by_username[$uname] : null;
 
-            // Tentukan tag IP aktif terakhir (prioritas: user_ip terbaru -> last_soal_ip)
-            $raw_tag = trim((string)$u->user_ip);
+            // Tentukan tag IP aktif HARI INI saja (jika user_login_date != hari ini, dianggap belum login hari ini)
+            $is_logged_today = (!empty($u->user_login_date) && substr((string)$u->user_login_date, 0, 10) === $today_date);
+            $raw_tag = $is_logged_today ? trim((string)$u->user_ip) : '';
             if($raw_tag === '' && $sesi && !empty($sesi->last_soal_ip)){
                 $raw_tag = trim((string)$sesi->last_soal_ip);
+            }
+            if($raw_tag === '' && $ulog && !empty($ulog['last_log'])){
+                if(preg_match('/((?:PUB|LAN)\|[^\s\)]+)/', (string)$ulog['last_log'], $m_tag)){
+                    $raw_tag = $m_tag[1];
+                }
             }
 
             $cur_mode = '';

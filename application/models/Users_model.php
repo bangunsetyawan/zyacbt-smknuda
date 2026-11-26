@@ -81,6 +81,9 @@ class Users_model extends CI_Model{
 		if($hasil == 0 && $kode_menu === 'tes-hasil-operator' && (string)$level === 'admin'){
 			$hasil = 1;
 		}
+		if($hasil == 0 && $kode_menu === 'laporan-rekap-anomali' && strtolower(trim((string)$level)) === 'admin'){
+			$hasil = 1;
+		}
 
 		return $hasil;
 	}
@@ -99,6 +102,9 @@ class Users_model extends CI_Model{
 			$col = ($tipe == 0) ? 'add' : 'edit';
 			$sql_fb = 'SELECT COUNT(*) AS hasil FROM user_akses WHERE user_akses.kode_menu="modul-import" AND user_akses.level=? AND user_akses.'.$col.'=1';
 			$hasil = $this->db->query($sql_fb, array((string)$level))->row()->hasil;
+		}
+		if($hasil == 0 && $kode_menu === 'laporan-rekap-anomali' && strtolower(trim((string)$level)) === 'admin'){
+			$hasil = 1;
 		}
 
 		return $hasil;

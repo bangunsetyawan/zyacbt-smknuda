@@ -399,7 +399,15 @@ class Tes_tambah extends Member_Controller {
         $total_soal_main = ($pair_data !== null && $pair_data['mode'] === 'gabung')
             ? ($soal_jml + $pair_data['jml'])
             : $soal_jml;
-        $main_max = round($total_soal_main * $poin_benar, 2);
+        if($soal_tipe === 1 && ($pair_data === null || $pair_data['mode'] !== 'gabung')){
+            // Pilihan Ganda otomatis Skala 100: (jumlah benar / jumlah soal) * 100
+            $poin_benar  = ($soal_jml > 0) ? round(100 / $soal_jml, 2) : 0;
+            $poin_salah  = 0;
+            $poin_kosong = 0;
+            $main_max    = 100.00;
+        }else{
+            $main_max = round($total_soal_main * $poin_benar, 2);
+        }
 
         $main_tes_id = $this->cbt_tes_model->save(array(
             'tes_nama' => $tes_nama,
@@ -617,6 +625,22 @@ class Tes_tambah extends Member_Controller {
                         $status['pesan'] = 'Jadwal waktu, durasi & token berhasil diperbarui (pengaturan soal/skor dikunci karena sudah ada peserta).';
                         $is_process = 0;
                     }else{
+                        // Jika paket soal yang terpasang khusus Pilihan Ganda (tset_tipe = 1), paksa Skala 100 otomatis
+                        $q_tsets = $this->cbt_tes_topik_set_model->get_by_kolom('tset_tes_id', $tes_id)->result();
+                        $is_pg_only = !empty($q_tsets);
+                        $total_pg = 0;
+                        foreach($q_tsets as $ts_item){
+                            if((int)$ts_item->tset_tipe !== 1){
+                                $is_pg_only = false;
+                                break;
+                            }
+                            $total_pg += (int)$ts_item->tset_jumlah;
+                        }
+                        if($is_pg_only && $total_pg > 0){
+                            $data['tes_score_right'] = round(100 / $total_pg, 2);
+                            $data['tes_score_wrong'] = 0;
+                            $data['tes_score_unanswered'] = 0;
+                        }
                         $this->cbt_tes_model->update('tes_id', $tes_id, $data);
                     }
             	}
@@ -738,8 +762,23 @@ class Tes_tambah extends Member_Controller {
             if($query_tes->num_rows()>0){
                 $query_tes = $query_tes->row();
                 $query_soal = $this->cbt_tes_topik_set_model->get_by_kolom('tset_tes_id', (int)$tes_id)->result();
+                $is_pg_only = !empty($query_soal);
+                $total_pg = 0;
                 foreach ($query_soal as $soal) {
+                    if((int)$soal->tset_tipe !== 1){
+                        $is_pg_only = false;
+                    }
+                    $total_pg += (int)$soal->tset_jumlah;
                     $max_score = $max_score + ($soal->tset_jumlah * $query_tes->tes_score_right);
+                }
+                if($is_pg_only && $total_pg > 0){
+                    // Pastikan tes PG selalu Skala 100 pas (100.00)
+                    $this->cbt_tes_model->update('tes_id', (int)$tes_id, array(
+                        'tes_score_right' => round(100 / $total_pg, 2),
+                        'tes_score_wrong' => 0,
+                        'tes_score_unanswered' => 0
+                    ));
+                    return 100.00;
                 }
             }
         }

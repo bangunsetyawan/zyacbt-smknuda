@@ -354,7 +354,7 @@ class Tes_daftar extends Member_Controller {
             $is_gabung = ($p['pair'] !== null && $p['pair']['mode'] === 'gabung');
             $total_jml = $is_gabung ? ($p['jml'] + $p['pair']['jml']) : $p['jml'];
             $poin = round(100 / $total_jml, 2);
-            $max_score = round($total_jml * $poin, 2);
+            $max_score = (!$is_gabung && (int)$p['tipe'] === 1) ? 100.00 : round($total_jml * $poin, 2);
 
             $main_id = $this->cbt_tes_model->save(array(
                 'tes_nama'             => $p['nama'],
@@ -878,10 +878,11 @@ class Tes_daftar extends Member_Controller {
 			$aksi .= '<button type="button" onclick="hapus('.$tid.')" class="btn btn-danger btn-xs" title="Hapus Tes"><i class="fa fa-trash"></i></button>';
 			$aksi .= '</div>';
 
+			$display_max = ($has_pg && !$has_essay) ? '100' : rtrim(rtrim(number_format((float)$temp->tes_max_score, 2, '.', ''), '0'), '.');
 			$record[] = ++$i;
             $record[] = '<strong>'.html_escape($temp->tes_nama).'</strong><div style="margin-top:3px;">'.$badge_tipe.' '.$badge_jadwal.$badge_token.'</div>'.$sub_soal;
             $record[] = $jadwal_html;
-            $record[] = '<strong>'.(int)$temp->tes_duration_time.' mnt</strong><br><small class="text-muted">Max: '.rtrim(rtrim(number_format((float)$temp->tes_max_score, 2, '.', ''), '0'), '.').' &bull; '.$total_soal.' soal</small>';
+            $record[] = '<strong>'.(int)$temp->tes_duration_time.' mnt</strong><br><small class="text-muted">Max: '.$display_max.' &bull; '.$total_soal.' soal</small>';
             $record[] = $grup_html;
             $record[] = $aksi;
             $record[] = '<input type="checkbox" class="chk-tes-item" name="edit-tes-id['.$tid.']" >';

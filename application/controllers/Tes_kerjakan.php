@@ -311,9 +311,21 @@ class Tes_kerjakan extends Tes_Controller {
 
                         // Mengupdate score, change time jika pilihan benar
                         if($query_jawaban->jawaban_benar==1){
-                            $data_tes_soal['tessoal_nilai'] = $query_tes->tes_score_right;
+                            $tset_list = $this->cbt_tes_topik_set_model->get_by_kolom('tset_tes_id', $tes_id)->result();
+                            $is_pg_only = !empty($tset_list);
+                            $total_pg = 0;
+                            foreach($tset_list as $tsr){
+                                if((int)$tsr->tset_tipe !== 1){
+                                    $is_pg_only = false;
+                                    break;
+                                }
+                                $total_pg += (int)$tsr->tset_jumlah;
+                            }
+                            $data_tes_soal['tessoal_nilai'] = ($is_pg_only && $total_pg > 0)
+                                ? round(100 / $total_pg, 2)
+                                : $query_tes->tes_score_right;
                         }else{
-                            $data_tes_soal['tessoal_nilai'] = $query_tes->tes_score_wrong;
+                            $data_tes_soal['tessoal_nilai'] = 0;
                         }
 
                         $this->cbt_tes_soal_model->update('tessoal_id', $tes_soal_id, $data_tes_soal);

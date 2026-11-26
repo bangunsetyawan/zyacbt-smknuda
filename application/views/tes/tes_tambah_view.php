@@ -537,7 +537,10 @@
                                     <div class="form-group">
                                         <label style="font-size:12px;">Poin Dasar per Soal <span id="badge-max-score" class="max-score-pill pull-right">Max: 100</span></label>
                                         <input type="number" step="0.01" name="tambah-poin" id="tambah-poin" class="form-control input-sm" value="2.50" required />
-                                        <div class="preset-bar">
+                                        <div class="preset-bar" id="pg-auto-skala-info" style="font-size:11.5px; color:#065f46; font-weight:600;">
+                                            <i class="fa fa-check-circle text-success"></i> PG Otomatis Skala 100 (Nilai = Benar &divide; Jumlah Soal &times; 100)
+                                        </div>
+                                        <div class="preset-bar" id="non-pg-preset-bar" style="display:none;">
                                             <button type="button" class="btn btn-success btn-xs" onclick="hitungPoinSkala100()">Skala 100</button>
                                             <button type="button" class="btn btn-default btn-xs" onclick="setPoinMentah()">Skor Mentah (1.00)</button>
                                         </div>
@@ -766,14 +769,47 @@
         updateKelasCounter();
     }
 
+    function syncPgAutoScoringUI(){
+        if(isEditMode){
+            $('#pg-auto-skala-info').hide();
+            $('#non-pg-preset-bar').show();
+            return;
+        }
+        var tipe = parseInt($('#smart-tipe').val(), 10) || 1;
+        var mode = $('input[name="pair-mode"]:checked').val() || 'utama_saja';
+        var isGabung = ($('#box-pair-esai').is(':visible') && mode === 'gabung');
+        if(tipe === 1 && !isGabung){
+            $('#tambah-poin').prop('readonly', true);
+            $('#tambah-poin-salah').val('0.00').prop('readonly', true);
+            $('#tambah-poin-kosong').val('0.00').prop('readonly', true);
+            $('#pg-auto-skala-info').show();
+            $('#non-pg-preset-bar').hide();
+            hitungPoinSkala100();
+            $('#badge-max-score').text('Max: 100');
+        }else{
+            $('#tambah-poin').prop('readonly', false);
+            $('#tambah-poin-salah').prop('readonly', false);
+            $('#tambah-poin-kosong').prop('readonly', false);
+            $('#pg-auto-skala-info').hide();
+            $('#non-pg-preset-bar').show();
+            updateMaxScorePreview();
+        }
+    }
+
     function updateMaxScorePreview(){
         var jml = parseInt($('#smart-jml').val(), 10) || 0;
         var poin = parseFloat($('#tambah-poin').val()) || 0;
         if(isEditMode){
             $('#badge-max-score').text('Poin/Soal: ' + poin.toFixed(2));
         }else{
-            var mode = $('input[name="pair-mode"]:checked').val();
-            if($('#box-pair-esai').is(':visible') && mode === 'gabung'){
+            var tipe = parseInt($('#smart-tipe').val(), 10) || 1;
+            var mode = $('input[name="pair-mode"]:checked').val() || 'utama_saja';
+            var isGabung = ($('#box-pair-esai').is(':visible') && mode === 'gabung');
+            if(tipe === 1 && !isGabung){
+                $('#badge-max-score').text('Max: 100');
+                return;
+            }
+            if(isGabung){
                 jml += (parseInt($('#pair-esai-jml').val(), 10) || 0);
             }
             var maxs = (jml * poin);
@@ -938,7 +974,7 @@
             $('#pair-esai-topik-id').val(0);
             $('input[name="pair-mode"][value="utama_saja"]').prop('checked', true);
             $('#box-pair-esai').hide();
-            hitungPoinSkala100();
+            syncPgAutoScoringUI();
         }
     }
 
@@ -1152,11 +1188,12 @@
         });
 
         $('#smart-jml, #tambah-poin').on('keyup input change', function(){
-            updateMaxScorePreview();
+            syncPgAutoScoringUI();
         });
 
         $(document).on('change', 'input[name="pair-mode"]', function(){
             updatePairModeUI();
+            syncPgAutoScoringUI();
         });
 
         $('#smart-tipe').change(function(){
@@ -1169,7 +1206,9 @@
                 $('#wrap-smart-opsi').show();
                 $('#lbl-smart-acak-jwb').show();
             }
+            syncPgAutoScoringUI();
         });
+        syncPgAutoScoringUI();
 
         if(!isEditMode){
             loadSmartTopiks($('#smart-modul').val());

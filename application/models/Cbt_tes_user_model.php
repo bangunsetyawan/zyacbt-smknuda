@@ -136,6 +136,20 @@ class Cbt_tes_user_model extends CI_Model{
         return $this->db->get();
     }
 
+    /**
+     * Ekspresi SQL perhitungan nilai akhir:
+     * Jika sesi hanya berisi Pilihan Ganda (soal_tipe = 1), otomatis Skala 100: (jumlah benar / jumlah soal) * 100.
+     * Jika terdapat Esai / Isian Singkat, tetap memakai SUM(tessoal_nilai) agar koreksi manual guru tidak berubah.
+     */
+    private function _nilai_sql_expr(){
+        return 'CASE '
+             . 'WHEN COUNT(`cbt_tes_soal`.`tessoal_id`) > 0 '
+             . 'AND SUM(CASE WHEN `cbt_soal`.`soal_tipe` != 1 THEN 1 ELSE 0 END) = 0 '
+             . 'THEN ROUND((COUNT(CASE WHEN `cbt_tes_soal`.`tessoal_nilai` > 0 THEN 1 END) * 100.0) / COUNT(`cbt_tes_soal`.`tessoal_id`), 2) '
+             . 'ELSE ROUND(COALESCE(SUM(`cbt_tes_soal`.`tessoal_nilai`), 0), 2) '
+             . 'END AS nilai';
+    }
+
     function get_by_tes_group_urut_tanggal($tes_id, $grup_id, $urutkan, $tanggal, $keterangan){
         $t0 = $this->db->escape((string)$tanggal[0]);
         $t1 = $this->db->escape((string)$tanggal[1]);
@@ -164,13 +178,14 @@ class Cbt_tes_user_model extends CI_Model{
 			$sql = $sql.' AND user_detail LIKE "%'.$this->db->escape_like_str((string)$keterangan).'%"';
 		}
 
-        $this->db->select('cbt_tes_user.*, cbt_tes.*, cbt_user.*, cbt_user_grup.grup_nama, SUM(`cbt_tes_soal`.`tessoal_nilai`) AS nilai ')
+        $this->db->select('cbt_tes_user.*, cbt_tes.*, cbt_user.*, cbt_user_grup.grup_nama, '.$this->_nilai_sql_expr(), FALSE)
                  ->where('( '.$sql.' )')
                  ->from($this->table)
                  ->join('cbt_user', 'cbt_tes_user.tesuser_user_id = cbt_user.user_id', 'right')
                  ->join('cbt_user_grup', 'cbt_user.user_grup_id = cbt_user_grup.grup_id')
                  ->join('cbt_tes', 'cbt_tes_user.tesuser_tes_id = cbt_tes.tes_id', 'left')
                  ->join('cbt_tes_soal', 'cbt_tes_soal.tessoal_tesuser_id = cbt_tes_user.tesuser_id', 'left')
+                 ->join('cbt_soal', 'cbt_soal.soal_id = cbt_tes_soal.tessoal_soal_id', 'left')
                  ->group_by('cbt_tes_user.tesuser_id')
                  ->order_by($order);
         return $this->db->get();
@@ -189,11 +204,12 @@ class Cbt_tes_user_model extends CI_Model{
     }
 
     function get_nilai_by_tes_user($tes_id, $user_id){
-        $this->db->select('SUM(`cbt_tes_soal`.`tessoal_nilai`) AS nilai')
+        $this->db->select($this->_nilai_sql_expr(), FALSE)
                  ->where('tesuser_tes_id', (int)$tes_id)
                  ->where('tesuser_user_id', (int)$user_id)
                  ->from($this->table)
-                 ->join('cbt_tes_soal', 'cbt_tes_soal.tessoal_tesuser_id = cbt_tes_user.tesuser_id');
+                 ->join('cbt_tes_soal', 'cbt_tes_soal.tessoal_tesuser_id = cbt_tes_user.tesuser_id')
+                 ->join('cbt_soal', 'cbt_soal.soal_id = cbt_tes_soal.tessoal_soal_id');
         return $this->db->get();
     }
 	
@@ -230,13 +246,14 @@ class Cbt_tes_user_model extends CI_Model{
 			$sql = $sql.' AND user_detail LIKE "%'.$this->db->escape_like_str((string)$keterangan).'%"';
 		}
 
-		$this->db->select('cbt_tes_user.*,cbt_user_grup.grup_nama, cbt_tes.*, cbt_user.*, SUM(`cbt_tes_soal`.`tessoal_nilai`) AS nilai ')
+		$this->db->select('cbt_tes_user.*,cbt_user_grup.grup_nama, cbt_tes.*, cbt_user.*, '.$this->_nilai_sql_expr(), FALSE)
                  ->where('( '.$sql.' )')
                  ->from($this->table)
                  ->join('cbt_user', 'cbt_tes_user.tesuser_user_id = cbt_user.user_id')
                  ->join('cbt_user_grup', 'cbt_user.user_grup_id = cbt_user_grup.grup_id')
                  ->join('cbt_tes', 'cbt_tes_user.tesuser_tes_id = cbt_tes.tes_id')
                  ->join('cbt_tes_soal', 'cbt_tes_soal.tessoal_tesuser_id = cbt_tes_user.tesuser_id')
+                 ->join('cbt_soal', 'cbt_soal.soal_id = cbt_tes_soal.tessoal_soal_id')
                  ->group_by('cbt_tes_user.tesuser_id')
 				 ->order_by($order)
                  ->limit((int)$rows, (int)$start);

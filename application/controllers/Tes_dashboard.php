@@ -216,8 +216,23 @@ class Tes_dashboard extends Tes_Controller {
 				        $data['url'] = $this->url;
 				        $data['tes_nama'] = $query_tes->tes_nama;
 				        $data['tes_waktu'] = $query_tes->tes_duration_time.' menit';
-				        $data['tes_poin'] = $query_tes->tes_score_right;
-				        $data['tes_max_score'] = $query_tes->tes_max_score;
+				        $tset_rows = $this->cbt_tes_topik_set_model->get_by_kolom('tset_tes_id', $query_tes->tes_id)->result();
+				        $is_pg_only = !empty($tset_rows);
+				        $pg_total = 0;
+				        foreach($tset_rows as $tsr){
+				        	if((int)$tsr->tset_tipe !== 1){
+				        		$is_pg_only = false;
+				        		break;
+				        	}
+				        	$pg_total += (int)$tsr->tset_jumlah;
+				        }
+				        if($is_pg_only && $pg_total > 0){
+				        	$data['tes_poin'] = round(100 / $pg_total, 2);
+				        	$data['tes_max_score'] = 100;
+				        }else{
+				        	$data['tes_poin'] = $query_tes->tes_score_right;
+				        	$data['tes_max_score'] = $query_tes->tes_max_score;
+				        }
 				        if($query_tes->tes_token==1){
 				        	$data['tes_token'] = '
 				        		<div class="cbt-token-box">

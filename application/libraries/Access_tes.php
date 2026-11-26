@@ -146,7 +146,9 @@ class Access_tes{
 		try {
 			$prev_tag = '';
 			$user_ruang = '';
-			$q_user = $this->CI->db->select('user_ip, user_detail')
+			$prev_login_date = '';
+			$today_date = date('Y-m-d');
+			$q_user = $this->CI->db->select('user_ip, user_detail, user_login_date')
 			                       ->where('user_name', $username)
 			                       ->limit(1)
 			                       ->get('cbt_user');
@@ -154,18 +156,26 @@ class Access_tes{
 				$u_row = $q_user->row();
 				$prev_tag = trim((string)$u_row->user_ip);
 				$user_ruang = trim((string)$u_row->user_detail);
+				$prev_login_date = trim((string)$u_row->user_login_date);
 			}
 
-			// Update cbt_user.user_ip jika berubah atau masih kosong
-			if($prev_tag !== $net['tag']){
+			// Anggap status kemarin sudah kedaluwarsa saat berganti hari
+			$is_same_day = ($prev_login_date === $today_date);
+			$effective_prev_tag = $is_same_day ? $prev_tag : '';
+
+			// Update cbt_user.user_ip dan tanggal login hari ini (untuk reset tampilan harian otomatis tanpa hapus log)
+			if($prev_tag !== $net['tag'] || !$is_same_day){
 				$this->CI->db->where('user_name', $username)
-				             ->update('cbt_user', array('user_ip' => $net['tag']));
+				             ->update('cbt_user', array(
+				                 'user_ip'         => $net['tag'],
+				                 'user_login_date' => $today_date
+				             ));
 			}
 
 			$prev_mode = '';
-			if(strpos($prev_tag, 'LAN|') === 0){
+			if(strpos($effective_prev_tag, 'LAN|') === 0){
 				$prev_mode = 'LAN';
-			}elseif(strpos($prev_tag, 'PUB|') === 0){
+			}elseif(strpos($effective_prev_tag, 'PUB|') === 0){
 				$prev_mode = 'PUB';
 			}
 
