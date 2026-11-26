@@ -11,6 +11,13 @@
 </section>
 
 <style type="text/css">
+    .btn-segarkan-besar {
+        font-size: 15px;
+        font-weight: 700;
+        padding: 10px 16px;
+        border-radius: 6px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.12);
+    }
     .pengawas-summary-grid {
         display: flex;
         flex-wrap: wrap;
@@ -153,7 +160,7 @@
         <div class="col-xs-12">
             <div class="box box-success" style="margin-bottom: 12px;">
                 <div class="box-header with-border">
-                    <h3 class="box-title"><i class="fa fa-filter"></i> Filter Ruang &amp; Kelas</h3>
+                    <h3 class="box-title"><i class="fa fa-map-marker"></i> Filter Ruang Ujian</h3>
                     <div class="box-tools pull-right">
                         <span id="indikator-live" class="label label-success" style="font-size:11.5px; padding:4px 8px;">
                             <i class="fa fa-circle"></i> Live 10d (<span id="jam-update">-</span>)
@@ -161,35 +168,24 @@
                     </div>
                 </div>
                 <div class="box-body">
+                    <!-- Tombol Segarkan Besar & Jelas di Atas Area Filter -->
+                    <div class="row" style="margin-bottom: 12px;">
+                        <div class="col-xs-12">
+                            <button type="button" id="btn-refresh-manual" class="btn btn-success btn-block btn-segarkan-besar">
+                                <i class="fa fa-refresh" id="ikon-segarkan"></i> <span id="teks-segarkan">Segarkan Data Sekarang</span>
+                            </button>
+                        </div>
+                    </div>
                     <div class="row">
-                        <div class="col-sm-3 col-xs-12" style="margin-bottom:8px;">
-                            <label style="font-size:12px; margin-bottom:3px;"><i class="fa fa-map-marker"></i> Pilih Ruang Ujian</label>
-                            <select id="filter-ruang" class="form-control input-sm">
+                        <div class="col-sm-6 col-xs-12" style="margin-bottom:8px;">
+                            <label style="font-size:13px; margin-bottom:4px;"><i class="fa fa-map-marker"></i> Pilih Ruang Ujian</label>
+                            <select id="filter-ruang" class="form-control">
                                 <?php if(!empty($select_ruang)){ echo $select_ruang; } ?>
                             </select>
                         </div>
-                        <div class="col-sm-3 col-xs-12" style="margin-bottom:8px;">
-                            <label style="font-size:12px; margin-bottom:3px;"><i class="fa fa-users"></i> Pilih Kelas / Group</label>
-                            <select id="filter-group" class="form-control input-sm">
-                                <?php if(!empty($select_group)){ echo $select_group; } ?>
-                            </select>
-                        </div>
-                        <div class="col-sm-3 col-xs-12" style="margin-bottom:8px;">
-                            <label style="font-size:12px; margin-bottom:3px;"><i class="fa fa-book"></i> Filter Mata Pelajaran / Tes</label>
-                            <select id="filter-tes" class="form-control input-sm">
-                                <?php if(!empty($select_tes)){ echo $select_tes; } ?>
-                            </select>
-                        </div>
-                        <div class="col-sm-3 col-xs-12" style="margin-bottom:8px;">
-                            <label style="font-size:12px; margin-bottom:3px;"><i class="fa fa-search"></i> Cari Nama / NISN / Status</label>
-                            <div class="input-group input-group-sm">
-                                <input type="text" id="filter-q" class="form-control" placeholder="Ketik nama / NISN...">
-                                <span class="input-group-btn">
-                                    <button type="button" id="btn-refresh-manual" class="btn btn-success btn-flat" title="Segarkan Sekarang">
-                                        <i class="fa fa-refresh"></i>
-                                    </button>
-                                </span>
-                            </div>
+                        <div class="col-sm-6 col-xs-12" style="margin-bottom:4px;">
+                            <label style="font-size:13px; margin-bottom:4px;"><i class="fa fa-search"></i> Cari Nama / NISN Peserta</label>
+                            <input type="text" id="filter-q" class="form-control" placeholder="Ketik nama atau NISN siswa...">
                         </div>
                     </div>
                     <input type="hidden" id="filter-warna" value="semua">
@@ -233,6 +229,7 @@
 <script type="text/javascript">
     var timerPantau = null;
     var sedangMemuat = false;
+    var retryAwalDone = false;
 
     function esc_html(str){
         if(str === null || str === undefined) return '';
@@ -254,27 +251,44 @@
         $('.pengawas-stat-card').removeClass('active-filter');
         var aktif = $('#filter-warna').val();
         $('#card-stat-' + aktif).addClass('active-filter');
-        muat_data_pantau();
+        muat_data_pantau(true);
     }
 
-    function muat_data_pantau(){
+    function set_tombol_loading(isLoading){
+        if(isLoading){
+            $('#ikon-segarkan').addClass('fa-spin');
+            $('#teks-segarkan').text('Menyegarkan Data...');
+        }else{
+            $('#ikon-segarkan').removeClass('fa-spin');
+            $('#teks-segarkan').text('Segarkan Data Sekarang');
+        }
+    }
+
+    function muat_data_pantau(isManual){
         if(sedangMemuat) return;
         sedangMemuat = true;
+        if(isManual){
+            set_tombol_loading(true);
+        }
 
         $.ajax({
             url: "<?php echo site_url().'/'.$url; ?>/get_pantau_data",
             type: "GET",
             dataType: "json",
             cache: false,
+            timeout: 8000,
             data: {
                 ruang: $('#filter-ruang').val(),
-                group: $('#filter-group').val(),
-                tes:   $('#filter-tes').val(),
                 warna: $('#filter-warna').val(),
-                q:     $('#filter-q').val()
+                q:     $('#filter-q').val(),
+                _t:    new Date().getTime()
             },
             success: function(res){
                 sedangMemuat = false;
+                set_tombol_loading(false);
+                if(typeof res === 'string'){
+                    try { res = $.parseJSON(res); } catch(e) { res = null; }
+                }
                 if(!res || res.status != 1) return;
 
                 $('#jam-update').text(res.waktu_server || '-');
@@ -288,7 +302,7 @@
                 if(items.length === 0){
                     $('#wadah-daftar-siswa').html(
                         '<div class="box box-solid"><div class="box-body text-center text-muted" style="padding:24px;">' +
-                        '<i class="fa fa-info-circle fa-2x"></i><p style="margin-top:8px; margin-bottom:0;">Tidak ada peserta yang cocok dengan filter ruang/kelas ini.</p>' +
+                        '<i class="fa fa-info-circle fa-2x"></i><p style="margin-top:8px; margin-bottom:0;">Tidak ada peserta yang cocok dengan filter ruang ini.</p>' +
                         '</div></div>'
                     );
                     return;
@@ -349,31 +363,38 @@
             },
             error: function(){
                 sedangMemuat = false;
+                set_tombol_loading(false);
+                if(!retryAwalDone){
+                    retryAwalDone = true;
+                    setTimeout(function(){
+                        muat_data_pantau(false);
+                    }, 1200);
+                }
             }
         });
     }
 
     $(function(){
-        $('#filter-ruang, #filter-group, #filter-tes').change(function(){
-            muat_data_pantau();
+        $('#filter-ruang').change(function(){
+            muat_data_pantau(true);
         });
 
         var searchTimeout = null;
         $('#filter-q').on('keyup input', function(){
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(function(){
-                muat_data_pantau();
+                muat_data_pantau(false);
             }, 350);
         });
 
         $('#btn-refresh-manual').click(function(){
-            muat_data_pantau();
+            muat_data_pantau(true);
         });
 
-        // Muat pertama kali & jalankan auto-refresh tiap 10 detik
-        muat_data_pantau();
+        // Muat pertama kali segera saat DOM siap & jalankan auto-refresh tiap 10 detik
+        muat_data_pantau(false);
         timerPantau = setInterval(function(){
-            muat_data_pantau();
+            muat_data_pantau(false);
         }, 10000);
     });
 </script>

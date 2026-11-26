@@ -41,30 +41,6 @@ class Tes_hasil_operator extends Member_Controller {
             }
         }
         $data['select_ruang'] = $select_ruang;
-
-        // 2. Dropdown Kelas / Group (dari cbt_user_grup)
-        $select_group = '<option value="semua">-- Semua Kelas / Group --</option>';
-        $q_group = $this->cbt_user_grup_model->get_group();
-        if($q_group->num_rows() > 0){
-            foreach($q_group->result() as $g){
-                $select_group .= '<option value="'.(int)$g->grup_id.'">'.html_escape($g->grup_nama).'</option>';
-            }
-        }
-        $data['select_group'] = $select_group;
-
-        // 3. Dropdown Tes (Utamakan tes hari ini / aktif)
-        $select_tes = '<option value="semua">-- Semua Ujian (Sesi Terakhir Siswa) --</option>';
-        $q_tes = $this->db->select('tes_id, tes_nama, tes_begin_time, tes_end_time')
-                          ->from('cbt_tes')
-                          ->order_by('tes_id', 'DESC')
-                          ->limit(30)
-                          ->get();
-        if($q_tes->num_rows() > 0){
-            foreach($q_tes->result() as $t){
-                $select_tes .= '<option value="'.(int)$t->tes_id.'">'.html_escape($t->tes_nama).'</option>';
-            }
-        }
-        $data['select_tes'] = $select_tes;
         
         $this->template->display_admin($this->kelompok.'/tes_hasil_operator_view', 'Pantau Ruang Pengawas', $data);
     }
@@ -74,6 +50,10 @@ class Tes_hasil_operator extends Member_Controller {
      * Read-only: Tanpa skor/nilai dan tanpa aksi proktor.
      */
     public function get_pantau_data(){
+        header('Content-Type: application/json; charset=utf-8');
+        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        header('Pragma: no-cache');
+
         $ruang  = trim((string)$this->input->get('ruang', TRUE));
         $group  = trim((string)$this->input->get('group', TRUE));
         $tes_id = trim((string)$this->input->get('tes', TRUE));
