@@ -170,7 +170,6 @@ class Modul_topik extends Member_Controller {
             echo json_encode(array('status' => 0, 'pesan' => 'Minimal harus ada 1 Modul tersisa di sistem.'));
             return;
         }
-        }
         $this->cbt_modul_model->delete('modul_id', $id);
         echo json_encode(array('status' => 1, 'pesan' => 'Modul kosong "'.$row->modul_nama.'" berhasil dihapus.'));
     }

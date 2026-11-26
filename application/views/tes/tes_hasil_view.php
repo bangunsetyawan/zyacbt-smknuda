@@ -162,7 +162,27 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" id="btn-edit-waktu-simpan" class="btn btn-primary">Simpan</button>
-                        <a href="#" class="btn btn-primary" data-dismiss="modal">Close</a>
+                        <a href="#" class="btn btn-default" data-dismiss="modal">Batal</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal" id="modal-konfirmasi-aksi" data-backdrop="static" tabindex="-1" role="dialog" aria-labelledby="konfirmasiModal" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button class="close" type="button" data-dismiss="modal">&times;</button>
+                        <div id="konfirmasi-aksi-judul" style="font-weight:bold;">Konfirmasi Aksi</div>
+                    </div>
+                    <div class="modal-body">
+                        <div class="box-body">
+                            <div id="konfirmasi-aksi-pesan" style="font-size:14px; line-height:1.6;"></div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" id="btn-konfirmasi-aksi-ya" class="btn btn-danger"><i class="fa fa-check"></i> Ya, Lanjutkan</button>
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
                     </div>
                 </div>
             </div>
@@ -216,16 +236,36 @@
             return $('#table-hasil tbody input[type="checkbox"]:checked').length;
         }
 
+        function buka_modal_konfirmasi(pilihan, judul, pesanHtml, btnClass, btnLabel){
+            $('#edit-pilihan').val(pilihan);
+            $('#konfirmasi-aksi-judul').html(judul);
+            $('#konfirmasi-aksi-pesan').html(pesanHtml);
+            $('#btn-konfirmasi-aksi-ya')
+                .removeClass('btn-danger btn-warning btn-info btn-primary btn-success')
+                .addClass(btnClass)
+                .html(btnLabel);
+            $('#modal-konfirmasi-aksi').modal('show');
+        }
+
+        $('#btn-konfirmasi-aksi-ya').click(function(){
+            $('#modal-konfirmasi-aksi').modal('hide');
+            $('#form-edit').submit();
+        });
+
         $('#btn-edit-hapus').click(function(){
             var jml = count_checked_peserta();
             if(jml === 0){
                 notify_error('Silahkan centang minimal 1 peserta terlebih dahulu.');
                 return;
             }
-            if(confirm('Yakin ingin MENGHAPUS PERMANEN hasil tes untuk ' + jml + ' peserta yang dipilih?\n\nData nilai & jawaban yang dihapus tidak dapat dikembalikan (peserta dapat mengulang ujian dari awal).')){
-                $('#edit-pilihan').val('hapus');
-                $('#form-edit').submit();
-            }
+            buka_modal_konfirmasi(
+                'hapus',
+                '<i class="fa fa-trash text-danger"></i> Konfirmasi Hapus Hasil Tes',
+                '<p>Yakin ingin <b>MENGHAPUS PERMANEN</b> hasil tes untuk <b>' + jml + ' peserta</b> yang dipilih?</p>' +
+                '<div class="callout callout-danger" style="margin-bottom:0; padding:10px 14px;">Data nilai &amp; jawaban yang dihapus tidak dapat dikembalikan (peserta dapat mengulang ujian dari awal).</div>',
+                'btn-danger',
+                '<i class="fa fa-trash"></i> Ya, Hapus Permanen (' + jml + ' Peserta)'
+            );
         });
 
         $('#btn-edit-hentikan').click(function(){
@@ -234,10 +274,14 @@
                 notify_error('Silahkan centang minimal 1 peserta terlebih dahulu.');
                 return;
             }
-            if(confirm('Hentikan dan kunci sesi ujian untuk ' + jml + ' peserta yang dipilih?')){
-                $('#edit-pilihan').val('hentikan');
-                $('#form-edit').submit();
-            }
+            buka_modal_konfirmasi(
+                'hentikan',
+                '<i class="fa fa-stop text-yellow"></i> Konfirmasi Hentikan Sesi Ujian',
+                '<p>Hentikan dan kunci sesi ujian untuk <b>' + jml + ' peserta</b> yang dipilih?</p>' +
+                '<p class="text-muted" style="margin-bottom:0;">Status ujian peserta tersebut akan diubah menjadi <b>Selesai</b>.</p>',
+                'btn-warning',
+                '<i class="fa fa-stop"></i> Ya, Hentikan (' + jml + ' Peserta)'
+            );
         });
 
         $('#btn-edit-buka-tes').click(function(){
@@ -246,10 +290,14 @@
                 notify_error('Silahkan centang minimal 1 peserta terlebih dahulu.');
                 return;
             }
-            if(confirm('Buka kembali sesi ujian untuk ' + jml + ' peserta yang dipilih agar bisa melanjutkan pengerjaan?')){
-                $('#edit-pilihan').val('buka');
-                $('#form-edit').submit();
-            }
+            buka_modal_konfirmasi(
+                'buka',
+                '<i class="fa fa-unlock text-aqua"></i> Konfirmasi Buka Kembali Sesi Ujian',
+                '<p>Buka kembali sesi ujian untuk <b>' + jml + ' peserta</b> yang dipilih agar bisa melanjutkan pengerjaan?</p>' +
+                '<p class="text-muted" style="margin-bottom:0;">Status ujian peserta akan kembali menjadi <b>Berjalan</b> selama sisa durasi waktu masih tersedia.</p>',
+                'btn-info',
+                '<i class="fa fa-unlock"></i> Ya, Buka Tes (' + jml + ' Peserta)'
+            );
         });
 
         $('#btn-edit-waktu').click(function(){
