@@ -22,7 +22,7 @@ class Welcome extends CI_Controller {
 		$data['timestamp'] = strtotime(date('Y-m-d H:i:s'));
 		if ($this->agent->is_browser()){
             if($this->agent->browser()=='Internet Explorer' ){
-                $this->template->display_user('blokbrowser_view', 'Browser yang didukung');
+                $this->template->display_user('blokbrowser_view', 'Ujian Online Berbasis Komputer');
             }else{
 				$akses_cbt = 1;
 				if($this->agent->is_mobile()){
@@ -63,7 +63,7 @@ class Welcome extends CI_Controller {
 				}
             }
         }else{
-            $this->template->display_user('blokbrowser_view', 'Browser yang didukung');
+            $this->template->display_user('blokbrowser_view', 'Ujian Online Berbasis Komputer');
         }
 	}
 

@@ -7,7 +7,7 @@ class Welcome extends CI_Controller {
 		
         if ($this->agent->is_browser()){
             if($this->agent->browser()=='Internet Explorer' ){
-                $this->template->display_user('blokbrowser_view', 'Browser yang didukung');
+                $this->template->display_user('blokbrowser_view', 'Ujian Online Berbasis Komputer');
             }else{
                 if(!$this->access->is_login()){
 					$data['link_login_operator'] = "tidak";
@@ -18,7 +18,7 @@ class Welcome extends CI_Controller {
         		}
             }
         }else{
-            $this->template->display_user('blokbrowser_view', 'Browser yang didukung');
+            $this->template->display_user('blokbrowser_view', 'Ujian Online Berbasis Komputer');
         }
 	}
     
