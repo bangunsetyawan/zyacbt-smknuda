@@ -392,6 +392,87 @@
 			font-size: 17px;
 		}
 	}
+	.cbt-filter-bar {
+		background: #ffffff;
+		border: 1px solid #e2e8f0;
+		border-radius: 14px;
+		padding: 12px 14px;
+		margin-bottom: 14px;
+		box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+	}
+	.cbt-filter-tabs {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		margin-bottom: 10px;
+	}
+	.cbt-filter-tab {
+		border: 1px solid #cbd5e1;
+		background: #f8fafc;
+		color: #334155;
+		border-radius: 999px;
+		padding: 6px 13px;
+		font-size: 12.5px;
+		font-weight: 700;
+		cursor: pointer;
+		transition: all 0.15s ease;
+	}
+	.cbt-filter-tab.is-active {
+		background: #00a65a;
+		border-color: #00a65a;
+		color: #ffffff;
+	}
+	.cbt-search-form {
+		display: flex;
+		gap: 8px;
+		align-items: center;
+	}
+	.cbt-search-input {
+		flex: 1;
+		min-width: 0;
+		height: 38px;
+		border: 1.5px solid #cbd5e1;
+		border-radius: 10px;
+		padding: 0 12px;
+		font-size: 14px;
+		color: #0f172a;
+		background: #ffffff;
+		outline: none;
+	}
+	.cbt-search-input:focus {
+		border-color: #00a65a;
+	}
+	.cbt-search-btn {
+		height: 38px;
+		padding: 0 15px;
+		border: none;
+		border-radius: 10px;
+		background: #00a65a;
+		color: #ffffff;
+		font-size: 13.5px;
+		font-weight: 700;
+		cursor: pointer;
+		white-space: nowrap;
+	}
+	.cbt-search-reset {
+		height: 38px;
+		padding: 0 12px;
+		border: 1px solid #cbd5e1;
+		border-radius: 10px;
+		background: #f8fafc;
+		color: #475569;
+		font-size: 13px;
+		font-weight: 700;
+		cursor: pointer;
+		white-space: nowrap;
+		display: none;
+	}
+	.cbt-filter-status {
+		margin: 8px 0 0 0;
+		font-size: 12px;
+		color: #64748b;
+		font-weight: 600;
+	}
 </style>
 
 <div class="container">
@@ -458,21 +539,56 @@
 		</div>
 
 		<?php if(!empty($daftar_tes)){ ?>
+			<?php
+				$cnt_all = count($daftar_tes);
+				$cnt_pg = 0;
+				$cnt_essay = 0;
+				foreach($daftar_tes as $t_count){
+					if(isset($t_count->exam_category) && $t_count->exam_category === 'essay'){
+						$cnt_essay++;
+					}else{
+						$cnt_pg++;
+					}
+				}
+			?>
+			<?php if($cnt_all > 4){ ?>
+			<div class="cbt-filter-bar" id="cbt-filter-bar">
+				<div class="cbt-filter-tabs">
+					<button type="button" class="cbt-filter-tab is-active" data-filter="all">Semua (<?php echo $cnt_all; ?>)</button>
+					<?php if($cnt_pg > 0){ ?>
+					<button type="button" class="cbt-filter-tab" data-filter="pg">Pilihan Ganda (<?php echo $cnt_pg; ?>)</button>
+					<?php } ?>
+					<?php if($cnt_essay > 0){ ?>
+					<button type="button" class="cbt-filter-tab" data-filter="essay">Esai (<?php echo $cnt_essay; ?>)</button>
+					<?php } ?>
+				</div>
+				<form class="cbt-search-form" id="cbt-search-form" onsubmit="return false;">
+					<input type="text" id="cbt-search-input" class="cbt-search-input" placeholder="Cari mapel atau kelas (misal: TKJ, XI, PJOK)..." autocomplete="off">
+					<button type="submit" id="cbt-search-btn" class="cbt-search-btn"><i class="fa fa-search"></i> Cari</button>
+					<button type="button" id="cbt-search-reset" class="cbt-search-reset">Reset</button>
+				</form>
+				<p class="cbt-filter-status" id="cbt-filter-status">Menampilkan <?php echo $cnt_all; ?> dari <?php echo $cnt_all; ?> jadwal</p>
+			</div>
+			<?php } ?>
 			<?php foreach($daftar_tes as $tes){
 				$cat_class = 'is-pg';
 				$badge_class = 'cbt-type-pg';
+				$data_cat = 'pg';
 				if(isset($tes->exam_category) && $tes->exam_category === 'essay'){
 					$cat_class = 'is-essay';
 					$badge_class = 'cbt-type-essay';
+					$data_cat = 'essay';
 				}elseif(isset($tes->exam_category) && $tes->exam_category === 'mixed'){
 					$cat_class = 'is-mixed';
 					$badge_class = 'cbt-type-mixed';
+					$data_cat = 'pg';
 				}
 				$cat_label = !empty($tes->category_label) ? $tes->category_label : 'PILIHAN GANDA';
 				$cat_icon = !empty($tes->category_icon) ? $tes->category_icon : 'fa-list-ul';
 				$jml_soal = isset($tes->total_soal) ? (int)$tes->total_soal : 0;
+				$search_text = strtolower(trim($tes->tes_nama . ' ' . (!empty($tes->tes_detail) ? $tes->tes_detail : '')));
 			?>
-				<div class="cbt-test-card <?php echo $cat_class; ?> <?php echo ($tes->status_type === 'upcoming') ? 'is-upcoming' : ''; ?>">
+				<div class="cbt-test-card <?php echo $cat_class; ?> <?php echo ($tes->status_type === 'upcoming') ? 'is-upcoming' : ''; ?>" data-category="<?php echo $data_cat; ?>" data-search="<?php echo htmlspecialchars($search_text, ENT_QUOTES, 'UTF-8'); ?>">
 					<div class="cbt-test-card-badges">
 						<span class="cbt-type-badge <?php echo $badge_class; ?>">
 							<i class="fa <?php echo $cat_icon; ?>"></i>
@@ -571,6 +687,11 @@
 					<?php } ?>
 				</div>
 			<?php } ?>
+			<div class="cbt-empty-state" id="cbt-search-empty" style="display: none;">
+				<i class="fa fa-search"></i>
+				<h4>Mapel Tidak Ditemukan</h4>
+				<p style="margin: 0; font-size: 13.5px;">Tidak ada jadwal ujian yang cocok dengan kata kunci pencarian. Klik <b>Reset</b> untuk menampilkan semua jadwal.</p>
+			</div>
 		<?php }else{ ?>
 			<div class="cbt-empty-state">
 				<i class="fa fa-calendar-o"></i>
@@ -580,3 +701,78 @@
 		<?php } ?>
 	</div>
 </div><!-- /.container -->
+
+<?php if(!empty($daftar_tes) && count($daftar_tes) > 4){ ?>
+<script type="text/javascript">
+(function(){
+	var activeCat = 'all';
+	var activeQuery = '';
+	var cards = document.querySelectorAll('.cbt-test-card');
+	var tabs = document.querySelectorAll('.cbt-filter-tab');
+	var form = document.getElementById('cbt-search-form');
+	var input = document.getElementById('cbt-search-input');
+	var resetBtn = document.getElementById('cbt-search-reset');
+	var statusEl = document.getElementById('cbt-filter-status');
+	var emptyEl = document.getElementById('cbt-search-empty');
+
+	function applyFilter(){
+		var shown = 0;
+		var total = cards.length;
+		var q = activeQuery.toLowerCase().trim();
+		for(var i = 0; i < total; i++){
+			var card = cards[i];
+			var cat = card.getAttribute('data-category') || 'pg';
+			var hay = card.getAttribute('data-search') || '';
+			var catOk = (activeCat === 'all' || cat === activeCat);
+			var qOk = (q === '' || hay.indexOf(q) !== -1);
+			if(catOk && qOk){
+				card.style.display = '';
+				shown++;
+			}else{
+				card.style.display = 'none';
+			}
+		}
+		if(resetBtn){
+			resetBtn.style.display = (q !== '' || activeCat !== 'all') ? 'inline-block' : 'none';
+		}
+		if(statusEl){
+			statusEl.textContent = 'Menampilkan ' + shown + ' dari ' + total + ' jadwal';
+		}
+		if(emptyEl){
+			emptyEl.style.display = (shown === 0) ? 'block' : 'none';
+		}
+	}
+
+	for(var j = 0; j < tabs.length; j++){
+		tabs[j].addEventListener('click', function(){
+			for(var k = 0; k < tabs.length; k++){
+				tabs[k].classList.remove('is-active');
+			}
+			this.classList.add('is-active');
+			activeCat = this.getAttribute('data-filter') || 'all';
+			applyFilter();
+		});
+	}
+
+	if(form){
+		form.addEventListener('submit', function(e){
+			e.preventDefault();
+			activeQuery = input ? input.value : '';
+			applyFilter();
+		});
+	}
+
+	if(resetBtn){
+		resetBtn.addEventListener('click', function(){
+			activeCat = 'all';
+			activeQuery = '';
+			if(input) input.value = '';
+			for(var k = 0; k < tabs.length; k++){
+				tabs[k].classList.toggle('is-active', (tabs[k].getAttribute('data-filter') === 'all'));
+			}
+			applyFilter();
+		});
+	}
+})();
+</script>
+<?php } ?>

@@ -88,7 +88,7 @@ class Cbt_tesgrup_model extends CI_Model{
 		$this->db->where('(tstgrp_grup_id="'.$grup_id.'" AND DATE(tes_begin_time)<="'.$today.'" AND DATE(tes_end_time)>="'.$today.'")')
                  ->from($this->table)
                  ->join('cbt_tes', 'cbt_tesgrup.tstgrp_tes_id = cbt_tes.tes_id')
-                 ->order_by('tes_begin_time ASC, tes_id ASC');
+                 ->order_by('tes_begin_time ASC, tes_nama ASC');
         return $this->db->get();
 	}
     
