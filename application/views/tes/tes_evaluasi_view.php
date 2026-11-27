@@ -283,7 +283,10 @@
         <div class="box-header with-border" style="padding:8px 14px;">
             <h3 class="box-title" style="font-size:14px; font-weight:700;"><i class="fa fa-filter"></i> Filter &amp; Mode Koreksi Cepat</h3>
             <div class="box-tools pull-right">
-                <button type="button" class="btn btn-default btn-xs" onclick="muatUlangSemua()">
+                <button type="button" class="btn btn-primary btn-xs" onclick="cetakJawabanEsai()" title="Pratinjau &amp; Cetak / Simpan PDF (Ctrl+P)">
+                    <i class="fa fa-print"></i> Cetak / PDF Esai
+                </button>
+                <button type="button" class="btn btn-default btn-xs" onclick="muatUlangSemua()" style="margin-left:4px;">
                     <i class="fa fa-refresh"></i> Refresh Data
                 </button>
             </div>
@@ -406,6 +409,18 @@
 <script type="text/javascript">
     var searchTimer = null;
     var lastTesForSoalList = null;
+
+    function cetakJawabanEsai(){
+        var params = $.param({
+            tes: $('#pilih-tes').val(),
+            grup: $('#pilih-grup').val(),
+            status_koreksi: $('#pilih-status').val(),
+            soal_id: $('#pilih-soal').val(),
+            urutkan: $('#pilih-urutkan').val(),
+            cari: $('#pilih-cari').val()
+        });
+        window.open('<?php echo site_url($url."/cetak"); ?>?' + params, '_blank');
+    }
 
     function updateHasilLink(){
         var tid = $('#pilih-tes').val();
@@ -712,6 +727,13 @@
                 aoData.push( { "name": "soal_id", "value": $('#pilih-soal').val()} );
                 aoData.push( { "name": "urutkan", "value": $('#pilih-urutkan').val()} );
                 aoData.push( { "name": "cari", "value": $('#pilih-cari').val()} );
+            }
+        });
+
+        $(document).on('keydown', function(e){
+            if((e.ctrlKey || e.metaKey) && e.key && e.key.toLowerCase() === 'p'){
+                e.preventDefault();
+                cetakJawabanEsai();
             }
         });
     });

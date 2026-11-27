@@ -366,21 +366,7 @@ class Tes_evaluasi extends Member_Controller {
         ));
     }
 
-    function get_datatable(){
-		$tes_id        = trim((string)$this->input->get('tes', TRUE));
-		$grup_id       = trim((string)$this->input->get('grup', TRUE));
-		$status_filter = trim((string)$this->input->get('status_koreksi', TRUE)); // belum | sudah | semua | kosong
-		$soal_filter   = trim((string)$this->input->get('soal_id', TRUE));
-		$urutkan       = trim((string)$this->input->get('urutkan', TRUE));
-		$search        = trim((string)$this->input->get('cari', TRUE));
-		if($search === '' && isset($_GET['sSearch']) && $_GET['sSearch'] !== ''){
-			$search = trim($_GET['sSearch']);
-		}
-
-		$start = $this->get_start();
-		$rows  = $this->get_rows();
-
-		$this->db->start_cache();
+    private function _apply_evaluasi_filters($tes_id, $grup_id, $status_filter, $soal_filter, $search){
 		$this->db->from('cbt_tes_user tu')
 		         ->join('cbt_tes t', 't.tes_id = tu.tesuser_tes_id')
 		         ->join('cbt_user u', 'u.user_id = tu.tesuser_user_id')
@@ -405,12 +391,10 @@ class Tes_evaluasi extends Member_Controller {
 		}elseif($status_filter === 'kosong'){
 			$this->db->where("(ts.tessoal_jawaban_text IS NULL OR TRIM(ts.tessoal_jawaban_text) = '')", NULL, FALSE);
 		}elseif($status_filter === 'semua'){
-			// tampilkan semua jawaban yang sudah diisi ataupun sudah dikoreksi
 			$this->db->where("((ts.tessoal_jawaban_text IS NOT NULL AND TRIM(ts.tessoal_jawaban_text) != '') OR ts.tessoal_comment IS NOT NULL)", NULL, FALSE);
 		}elseif($status_filter === 'semua_termasuk_kosong'){
 			// tampilkan mutlak seluruh baris termasuk yang belum dijawab
 		}else{
-			// Default: 'belum' -> sudah dijawab siswa tapi belum dikoreksi
 			$this->db->where("ts.tessoal_jawaban_text IS NOT NULL AND TRIM(ts.tessoal_jawaban_text) != ''", NULL, FALSE);
 			$this->db->where('ts.tessoal_comment IS NULL', NULL, FALSE);
 		}
@@ -419,16 +403,9 @@ class Tes_evaluasi extends Member_Controller {
 			$like = $this->db->escape_like_str($search);
 			$this->db->where("(u.user_firstname LIKE '%".$like."%' ESCAPE '!' OR u.user_name LIKE '%".$like."%' ESCAPE '!' OR ts.tessoal_jawaban_text LIKE '%".$like."%' ESCAPE '!' OR s.soal_detail LIKE '%".$like."%' ESCAPE '!')", NULL, FALSE);
 		}
+    }
 
-		$this->db->stop_cache();
-		$iTotal = $this->db->count_all_results();
-
-		$this->db->select('ts.tessoal_id, ts.tessoal_tesuser_id, ts.tessoal_jawaban_text, ts.tessoal_nilai, ts.tessoal_comment, ts.tessoal_order,
-		                   t.tes_id, t.tes_nama, t.tes_score_right, t.tes_score_wrong, t.tes_max_score,
-		                   u.user_id, u.user_name, u.user_firstname, u.user_detail,
-		                   g.grup_nama,
-		                   s.soal_id, s.soal_detail, s.soal_kunci');
-
+    private function _apply_evaluasi_order($urutkan){
 		if($urutkan === 'user' || $urutkan === 'siswa'){
 			$this->db->order_by('g.grup_nama', 'ASC')
 			         ->order_by('u.user_firstname', 'ASC')
@@ -441,11 +418,117 @@ class Tes_evaluasi extends Member_Controller {
 			$this->db->order_by('ts.tessoal_nilai', 'DESC')
 			         ->order_by('u.user_firstname', 'ASC');
 		}else{
-			// Default: urut per Butir Soal lalu Kelas & Nama Siswa (paling enak untuk koreksi konsisten per nomor)
 			$this->db->order_by('s.soal_id', 'ASC')
 			         ->order_by('g.grup_nama', 'ASC')
 			         ->order_by('u.user_firstname', 'ASC');
 		}
+    }
+
+    /**
+     * Halaman pratinjau & cetak PDF jawaban esai per mapel / kelas
+     */
+    public function cetak(){
+		$tes_id        = trim((string)$this->input->get('tes', TRUE));
+		$grup_id       = trim((string)$this->input->get('grup', TRUE));
+		$status_filter = trim((string)$this->input->get('status_koreksi', TRUE));
+		if($status_filter === ''){
+			$status_filter = 'semua';
+		}
+		$soal_filter   = trim((string)$this->input->get('soal_id', TRUE));
+		$urutkan       = trim((string)$this->input->get('urutkan', TRUE));
+		$search        = trim((string)$this->input->get('cari', TRUE));
+
+		$this->_apply_evaluasi_filters($tes_id, $grup_id, $status_filter, $soal_filter, $search);
+		$this->db->select('ts.tessoal_id, ts.tessoal_jawaban_text, ts.tessoal_nilai, ts.tessoal_comment, ts.tessoal_order,
+		                   t.tes_id, t.tes_nama,
+		                   u.user_id, u.user_name, u.user_firstname,
+		                   g.grup_nama,
+		                   s.soal_id, s.soal_detail');
+		$this->_apply_evaluasi_order($urutkan);
+		$rows = $this->db->get()->result();
+
+		// Nama Tes & Nama Grup untuk kop laporan
+		$nama_tes = 'Semua Tes Esai';
+		if($tes_id !== '' && $tes_id !== 'semua' && is_numeric($tes_id)){
+			$q_tes = $this->cbt_tes_model->get_by_kolom_limit('tes_id', (int)$tes_id, 1);
+			if($q_tes->num_rows() > 0){
+				$nama_tes = $q_tes->row()->tes_nama;
+			}
+		}
+
+		$nama_grup = 'Semua Kelas';
+		if($grup_id !== '' && $grup_id !== 'semua' && is_numeric($grup_id)){
+			$q_grup = $this->cbt_user_grup_model->get_by_kolom_limit('grup_id', (int)$grup_id, 1);
+			if($q_grup->num_rows() > 0){
+				$nama_grup = $q_grup->row()->grup_nama;
+			}
+		}
+
+		$status_labels = array(
+			'belum' => 'Belum Dikoreksi',
+			'sudah' => 'Sudah Dikoreksi',
+			'semua' => 'Semua Jawaban Terisi',
+			'kosong' => 'Jawaban Kosong',
+			'semua_termasuk_kosong' => 'Semua (Termasuk Kosong)'
+		);
+
+		// Kelompokkan per butir soal agar teks soal tidak diulang per siswa
+		$soal_groups = array();
+		$siswa_set = array();
+		foreach($rows as $r){
+			$sid = (int)$r->soal_id;
+			$siswa_set[(int)$r->user_id] = true;
+			if(!isset($soal_groups[$sid])){
+				$soal_groups[$sid] = array(
+					'soal_id' => $sid,
+					'soal_detail' => $r->soal_detail,
+					'tes_nama' => $r->tes_nama,
+					'items' => array()
+				);
+			}
+			$soal_groups[$sid]['items'][] = $r;
+		}
+
+		$data = array(
+			'nama_tes' => $nama_tes,
+			'nama_grup' => $nama_grup,
+			'status_label' => isset($status_labels[$status_filter]) ? $status_labels[$status_filter] : 'Semua Jawaban',
+			'jumlah_siswa' => count($siswa_set),
+			'jumlah_jawaban' => count($rows),
+			'soal_groups' => array_values($soal_groups),
+			'show_tes_col' => ($tes_id === '' || $tes_id === 'semua')
+		);
+
+		$this->load->view($this->kelompok.'/tes_evaluasi_cetak_view', $data);
+    }
+
+    function get_datatable(){
+		$tes_id        = trim((string)$this->input->get('tes', TRUE));
+		$grup_id       = trim((string)$this->input->get('grup', TRUE));
+		$status_filter = trim((string)$this->input->get('status_koreksi', TRUE)); // belum | sudah | semua | kosong
+		$soal_filter   = trim((string)$this->input->get('soal_id', TRUE));
+		$urutkan       = trim((string)$this->input->get('urutkan', TRUE));
+		$search        = trim((string)$this->input->get('cari', TRUE));
+		if($search === '' && isset($_GET['sSearch']) && $_GET['sSearch'] !== ''){
+			$search = trim($_GET['sSearch']);
+		}
+
+		$start = $this->get_start();
+		$rows  = $this->get_rows();
+
+		$this->db->start_cache();
+		$this->_apply_evaluasi_filters($tes_id, $grup_id, $status_filter, $soal_filter, $search);
+
+		$this->db->stop_cache();
+		$iTotal = $this->db->count_all_results();
+
+		$this->db->select('ts.tessoal_id, ts.tessoal_tesuser_id, ts.tessoal_jawaban_text, ts.tessoal_nilai, ts.tessoal_comment, ts.tessoal_order,
+		                   t.tes_id, t.tes_nama, t.tes_score_right, t.tes_score_wrong, t.tes_max_score,
+		                   u.user_id, u.user_name, u.user_firstname, u.user_detail,
+		                   g.grup_nama,
+		                   s.soal_id, s.soal_detail, s.soal_kunci');
+
+		$this->_apply_evaluasi_order($urutkan);
 
 		$this->db->limit($rows, $start);
 		$query_rows = $this->db->get()->result();
