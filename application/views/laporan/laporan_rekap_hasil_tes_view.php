@@ -38,7 +38,7 @@
 @media print {
 	@page {
 		size: landscape;
-		margin: 10mm;
+		margin: 8mm;
 	}
 	body {
 		background: #fff !important;
@@ -57,14 +57,35 @@
 	#preview-box {
 		border: none !important;
 		box-shadow: none !important;
+		margin-bottom: 0 !important;
+	}
+	#print-area {
+		padding: 0 !important;
+	}
+	.rapot-header {
+		padding-bottom: 5px;
+		margin-bottom: 8px;
+	}
+	.rapot-header h3 {
+		font-size: 13px;
+		margin-bottom: 2px;
+	}
+	.rapot-meta {
+		font-size: 10px;
 	}
 	.table-responsive {
 		overflow: visible !important;
 		border: none !important;
+		margin-bottom: 4px !important;
 	}
 	.table-rekap th, .table-rekap td {
-		font-size: 11px;
-		padding: 4px 6px !important;
+		font-size: 9px;
+		line-height: 1.2;
+		padding: 2px 4px !important;
+	}
+	.legend-print {
+		font-size: 8.5px !important;
+		margin-top: 4px !important;
 	}
 }
 </style>
@@ -176,6 +197,9 @@
 							<thead id="pv-thead"></thead>
 							<tbody id="pv-tbody"></tbody>
 						</table>
+					</div>
+					<div class="small text-muted legend-print" style="margin-top:8px;">
+						<strong>Keterangan:</strong> <strong>N/A</strong> = Peserta tidak mengikuti tes pada jadwal tersebut (tidak dihitung dalam pembagi kolom <strong>Rata-Rata</strong>).
 					</div>
 				</div>
 			</div>

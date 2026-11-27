@@ -231,6 +231,28 @@ class Laporan_analisis_butir_soal extends Member_Controller {
         echo json_encode($status);
     }
 
+    private function _badge_rgb($badge){
+        $map = array(
+            'success' => '00A65A',
+            'info'    => '00C0EF',
+            'warning' => 'F39C12',
+            'danger'  => 'DD4B39'
+        );
+        return isset($map[$badge]) ? $map[$badge] : '777777';
+    }
+
+    private function _apply_excel_badge_style($worksheet, $col, $row, $badge, $font_size = 8){
+        $rgb = $this->_badge_rgb($badge);
+        $style = $worksheet->getStyleByColumnAndRow($col, $row);
+        $style->getFill()->setFillType(PHPExcel_Style_Fill::FILL_SOLID)->getStartColor()->setRGB($rgb);
+        $style->getFont()->setBold(true)->setSize($font_size)->getColor()->setRGB('FFFFFF');
+        $style->getAlignment()
+              ->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER)
+              ->setVertical(PHPExcel_Style_Alignment::VERTICAL_CENTER)
+              ->setWrapText(true);
+        $style->getBorders()->getAllBorders()->setBorderStyle(PHPExcel_Style_Border::BORDER_THIN)->getColor()->setRGB('DDDDDD');
+    }
+
     public function export(){
     	$this->load->library('form_validation');
         
@@ -278,21 +300,75 @@ class Laporan_analisis_butir_soal extends Member_Controller {
                 if(!empty($analisis['kesulitan'])){
                     $worksheet->setCellValueByColumnAndRow(2, $row, 'Tingkat Kesulitan');
                     $worksheet->getStyleByColumnAndRow(2, $row)->getFont()->setBold(true);
+                    $worksheet->getStyleByColumnAndRow(2, $row)->getAlignment()->setVertical(PHPExcel_Style_Alignment::VERTICAL_CENTER);
+                    $worksheet->getRowDimension($row)->setRowHeight(32);
                     $kolom = 3;
                     foreach($analisis['kesulitan'] as $item){
-                        $worksheet->setCellValueByColumnAndRow($kolom, $row, $item['text']);
-                        $worksheet->getStyleByColumnAndRow($kolom, $row)->getFont()->setBold(true);
+                        $cell_val = number_format($item['nilai'], 1)."%\n(".$item['kategori'].")";
+                        $worksheet->setCellValueByColumnAndRow($kolom, $row, $cell_val);
+                        $this->_apply_excel_badge_style($worksheet, $kolom, $row, $item['badge'], 8);
                         $kolom++;
                     }
 
                     $row++;
                     $worksheet->setCellValueByColumnAndRow(2, $row, 'Daya Beda');
                     $worksheet->getStyleByColumnAndRow(2, $row)->getFont()->setBold(true);
+                    $worksheet->getStyleByColumnAndRow(2, $row)->getAlignment()->setVertical(PHPExcel_Style_Alignment::VERTICAL_CENTER);
+                    $worksheet->getRowDimension($row)->setRowHeight(32);
                     $kolom = 3;
                     foreach($analisis['daya_beda'] as $item){
-                        $worksheet->setCellValueByColumnAndRow($kolom, $row, $item['text']);
-                        $worksheet->getStyleByColumnAndRow($kolom, $row)->getFont()->setBold(true);
+                        $cell_val = number_format($item['nilai'], 2)."\n(".$item['kategori'].")";
+                        $worksheet->setCellValueByColumnAndRow($kolom, $row, $cell_val);
+                        $this->_apply_excel_badge_style($worksheet, $kolom, $row, $item['badge'], 8);
                         $kolom++;
+                    }
+
+                    // Baris legenda di bawah ringkasan
+                    $row += 2;
+                    $worksheet->setCellValueByColumnAndRow(2, $row, 'Keterangan Matriks');
+                    $worksheet->getStyleByColumnAndRow(2, $row)->getFont()->setBold(true);
+                    $worksheet->mergeCellsByColumnAndRow(3, $row, 8, $row);
+                    $worksheet->setCellValueByColumnAndRow(3, $row, '1 = Benar, 0 = Salah');
+                    $worksheet->getStyleByColumnAndRow(3, $row)->getFont()->setBold(true);
+                    $worksheet->getRowDimension($row)->setRowHeight(18);
+
+                    $row++;
+                    $worksheet->setCellValueByColumnAndRow(2, $row, 'Kategori Tingkat Kesulitan');
+                    $worksheet->getStyleByColumnAndRow(2, $row)->getFont()->setBold(true);
+                    $worksheet->getRowDimension($row)->setRowHeight(20);
+                    $leg_kesulitan = array(
+                        array('0-30% Sukar', 'danger'),
+                        array('31-70% Sedang', 'warning'),
+                        array('71-100% Mudah', 'success')
+                    );
+                    $c_start = 3;
+                    foreach($leg_kesulitan as $lk){
+                        $worksheet->mergeCellsByColumnAndRow($c_start, $row, $c_start + 3, $row);
+                        $worksheet->setCellValueByColumnAndRow($c_start, $row, $lk[0]);
+                        for($mc = $c_start; $mc <= $c_start + 3; $mc++){
+                            $this->_apply_excel_badge_style($worksheet, $mc, $row, $lk[1], 9);
+                        }
+                        $c_start += 4;
+                    }
+
+                    $row++;
+                    $worksheet->setCellValueByColumnAndRow(2, $row, 'Kategori Daya Beda');
+                    $worksheet->getStyleByColumnAndRow(2, $row)->getFont()->setBold(true);
+                    $worksheet->getRowDimension($row)->setRowHeight(20);
+                    $leg_daya_beda = array(
+                        array('>=0,40 Baik', 'success'),
+                        array('0,20-0,39 Cukup', 'info'),
+                        array('0,00-0,19 Buruk', 'warning'),
+                        array('<0 Soal bermasalah', 'danger')
+                    );
+                    $c_start = 3;
+                    foreach($leg_daya_beda as $ld){
+                        $worksheet->mergeCellsByColumnAndRow($c_start, $row, $c_start + 3, $row);
+                        $worksheet->setCellValueByColumnAndRow($c_start, $row, $ld[0]);
+                        for($mc = $c_start; $mc <= $c_start + 3; $mc++){
+                            $this->_apply_excel_badge_style($worksheet, $mc, $row, $ld[1], 9);
+                        }
+                        $c_start += 4;
                     }
                 }
             }

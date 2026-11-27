@@ -58,7 +58,7 @@
 @media print {
 	@page {
 		size: landscape;
-		margin: 10mm;
+		margin: 6mm;
 	}
 	body {
 		background: #fff !important;
@@ -77,14 +77,40 @@
 	#preview-box {
 		border: none !important;
 		box-shadow: none !important;
+		margin-bottom: 0 !important;
+	}
+	#print-area {
+		padding: 0 !important;
+	}
+	.rapot-header {
+		padding-bottom: 5px;
+		margin-bottom: 8px;
+	}
+	.rapot-header h3 {
+		font-size: 13px;
+		margin-bottom: 2px;
+	}
+	.rapot-meta {
+		font-size: 10px;
 	}
 	.table-responsive {
 		overflow: visible !important;
 		border: none !important;
+		margin-bottom: 4px !important;
 	}
 	.table-analisis th, .table-analisis td {
-		font-size: 10px;
-		padding: 3px 4px !important;
+		font-size: 8px;
+		line-height: 1.15;
+		padding: 1px 2px !important;
+	}
+	.badge-kat {
+		font-size: 7.5px;
+		padding: 1px 3px;
+		margin-top: 1px;
+	}
+	.legend-print {
+		font-size: 8.5px !important;
+		margin-top: 4px !important;
 	}
 }
 </style>
@@ -187,13 +213,17 @@
 							<tfoot id="pv-tfoot"></tfoot>
 						</table>
 					</div>
-					<div class="small text-muted" style="margin-top:8px;">
-						<strong>Keterangan Tingkat Kesulitan:</strong>
+					<div class="small text-muted legend-print" style="margin-top:8px;">
+						<strong>Keterangan Matriks:</strong>
+						<span class="badge-kat cell-benar" style="border:1px solid #b7e4c7;">1 = Benar</span>
+						<span class="badge-kat cell-salah" style="border:1px solid #f5c6cb;">0 = Salah</span>
+						&nbsp;&nbsp;|&nbsp;&nbsp;
+						<strong>Tingkat Kesulitan:</strong>
 						<span class="badge-kat kat-danger">0–30% Sukar</span>
 						<span class="badge-kat kat-warning">31–70% Sedang</span>
 						<span class="badge-kat kat-success">71–100% Mudah</span>
 						&nbsp;&nbsp;|&nbsp;&nbsp;
-						<strong>Keterangan Daya Beda:</strong>
+						<strong>Daya Beda:</strong>
 						<span class="badge-kat kat-success">&ge;0,40 Baik</span>
 						<span class="badge-kat kat-info">0,20–0,39 Cukup</span>
 						<span class="badge-kat kat-warning">0,00–0,19 Buruk</span>
