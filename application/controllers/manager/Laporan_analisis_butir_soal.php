@@ -304,9 +304,9 @@ class Laporan_analisis_butir_soal extends Member_Controller {
                     $worksheet->getRowDimension($row)->setRowHeight(32);
                     $kolom = 3;
                     foreach($analisis['kesulitan'] as $item){
-                        $cell_val = number_format($item['nilai'], 1)."%\n(".$item['kategori'].")";
+                        $cell_val = number_format($item['nilai'], 1)."%\n".$item['kategori'];
                         $worksheet->setCellValueByColumnAndRow($kolom, $row, $cell_val);
-                        $this->_apply_excel_badge_style($worksheet, $kolom, $row, $item['badge'], 8);
+                        $this->_apply_excel_badge_style($worksheet, $kolom, $row, $item['badge'], 7);
                         $kolom++;
                     }
 
@@ -317,9 +317,10 @@ class Laporan_analisis_butir_soal extends Member_Controller {
                     $worksheet->getRowDimension($row)->setRowHeight(32);
                     $kolom = 3;
                     foreach($analisis['daya_beda'] as $item){
-                        $cell_val = number_format($item['nilai'], 2)."\n(".$item['kategori'].")";
+                        $kat_short = ($item['kategori'] === 'Soal bermasalah') ? 'Bermasalah' : $item['kategori'];
+                        $cell_val = number_format($item['nilai'], 2)."\n".$kat_short;
                         $worksheet->setCellValueByColumnAndRow($kolom, $row, $cell_val);
-                        $this->_apply_excel_badge_style($worksheet, $kolom, $row, $item['badge'], 8);
+                        $this->_apply_excel_badge_style($worksheet, $kolom, $row, $item['badge'], 7);
                         $kolom++;
                     }
 
