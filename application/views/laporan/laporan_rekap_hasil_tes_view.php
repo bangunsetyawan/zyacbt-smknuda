@@ -17,6 +17,9 @@
 	margin-right: 18px;
 	display: inline-block;
 }
+.print-only {
+	display: none;
+}
 .table-rekap th, .table-rekap td {
 	vertical-align: middle !important;
 	font-size: 13px;
@@ -37,17 +40,22 @@
 
 @media print {
 	@page {
-		size: landscape;
+		size: A4 landscape;
 		margin: 8mm;
 	}
 	body {
 		background: #fff !important;
+		color: #222 !important;
+		font-family: "Helvetica Neue", Arial, sans-serif !important;
 		-webkit-print-color-adjust: exact;
 		print-color-adjust: exact;
 	}
 	.main-header, .main-sidebar, .left-side, .main-footer,
 	.content-header, .callout, .no-print {
 		display: none !important;
+	}
+	.print-only {
+		display: inline-block !important;
 	}
 	.content-wrapper, .right-side, .content {
 		margin-left: 0 !important;
@@ -63,29 +71,63 @@
 		padding: 0 !important;
 	}
 	.rapot-header {
+		border-bottom: 2px solid #1f4e78;
 		padding-bottom: 5px;
-		margin-bottom: 8px;
+		margin-bottom: 7px;
 	}
 	.rapot-header h3 {
 		font-size: 13px;
-		margin-bottom: 2px;
+		color: #1f4e78 !important;
+		letter-spacing: 0.4px;
+		margin-bottom: 4px;
 	}
 	.rapot-meta {
-		font-size: 10px;
+		background: #f4f7fb !important;
+		border: 1px solid #d5e0ec;
+		border-radius: 3px;
+		padding: 4px 8px;
+		font-size: 9.5px;
 	}
 	.table-responsive {
 		overflow: visible !important;
 		border: none !important;
 		margin-bottom: 4px !important;
 	}
+	.table-rekap {
+		width: 100% !important;
+		border-collapse: collapse !important;
+		margin-bottom: 0 !important;
+	}
+	.table-rekap thead {
+		display: table-header-group;
+	}
+	.table-rekap thead th {
+		background-color: #1f4e78 !important;
+		color: #fff !important;
+		border-color: #173a59 !important;
+		font-weight: 700;
+	}
+	.table-rekap thead th.col-rata {
+		background-color: #163a5a !important;
+		color: #fff !important;
+	}
+	.table-rekap tr {
+		page-break-inside: avoid;
+		break-inside: avoid;
+	}
 	.table-rekap th, .table-rekap td {
-		font-size: 9px;
+		font-size: 8.5px;
 		line-height: 1.2;
-		padding: 2px 4px !important;
+		padding: 2.5px 4px !important;
+		border-color: #cfd8dc !important;
 	}
 	.legend-print {
-		font-size: 8.5px !important;
-		margin-top: 4px !important;
+		background: #f8f9fa !important;
+		border: 1px solid #e0e0e0;
+		border-radius: 3px;
+		padding: 4px 6px;
+		font-size: 8px !important;
+		margin-top: 5px !important;
 	}
 }
 </style>
@@ -183,6 +225,7 @@
 							<span><strong>Rentang Waktu:</strong> <span id="pv-periode">-</span></span>
 							<span><strong>Jumlah Tes:</strong> <span id="pv-jml-tes">0</span></span>
 							<span><strong>Jumlah Siswa:</strong> <span id="pv-jml-siswa">0</span></span>
+							<span class="print-only" style="float:right; margin-right:0;"><strong>Dicetak:</strong> <span id="pv-cetak">-</span></span>
 						</div>
 					</div>
 					<div id="pv-loading" class="text-center" style="display:none; padding:20px;">
@@ -227,6 +270,8 @@
     });
 
 	$('#btn-print').click(function(){
+		var now = new Date();
+		$('#pv-cetak').text(now.toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' }) + ' ' + now.toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit' }));
 		window.print();
 	});
 

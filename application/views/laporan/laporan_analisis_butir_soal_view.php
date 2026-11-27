@@ -17,6 +17,9 @@
 	margin-right: 18px;
 	display: inline-block;
 }
+.print-only {
+	display: none;
+}
 .table-analisis th, .table-analisis td {
 	text-align: center;
 	vertical-align: middle !important;
@@ -57,17 +60,22 @@
 
 @media print {
 	@page {
-		size: landscape;
-		margin: 6mm;
+		size: A4 landscape;
+		margin: 7mm 6mm;
 	}
 	body {
 		background: #fff !important;
+		color: #222 !important;
+		font-family: "Helvetica Neue", Arial, sans-serif !important;
 		-webkit-print-color-adjust: exact;
 		print-color-adjust: exact;
 	}
 	.main-header, .main-sidebar, .left-side, .main-footer,
 	.content-header, .callout, .no-print {
 		display: none !important;
+	}
+	.print-only {
+		display: inline-block !important;
 	}
 	.content-wrapper, .right-side, .content {
 		margin-left: 0 !important;
@@ -83,34 +91,86 @@
 		padding: 0 !important;
 	}
 	.rapot-header {
+		border-bottom: 2px solid #1f4e78;
 		padding-bottom: 5px;
-		margin-bottom: 8px;
+		margin-bottom: 7px;
 	}
 	.rapot-header h3 {
 		font-size: 13px;
-		margin-bottom: 2px;
+		color: #1f4e78 !important;
+		letter-spacing: 0.4px;
+		margin-bottom: 4px;
 	}
 	.rapot-meta {
-		font-size: 10px;
+		background: #f4f7fb !important;
+		border: 1px solid #d5e0ec;
+		border-radius: 3px;
+		padding: 4px 8px;
+		font-size: 9.5px;
 	}
 	.table-responsive {
 		overflow: visible !important;
 		border: none !important;
 		margin-bottom: 4px !important;
 	}
+	.table-analisis {
+		width: 100% !important;
+		border-collapse: collapse !important;
+		margin-bottom: 0 !important;
+	}
+	.table-analisis thead {
+		display: table-header-group;
+	}
+	.table-analisis thead th {
+		background-color: #1f4e78 !important;
+		color: #fff !important;
+		border-color: #173a59 !important;
+		font-weight: 700;
+	}
+	.table-analisis tfoot {
+		display: table-row-group;
+	}
+	.table-analisis tr {
+		page-break-inside: avoid;
+		break-inside: avoid;
+	}
 	.table-analisis th, .table-analisis td {
-		font-size: 8px;
+		font-size: 7px;
 		line-height: 1.15;
-		padding: 1px 2px !important;
+		padding: 1.5px 1.5px !important;
+		border-color: #cfd8dc !important;
+	}
+	.table-analisis td.text-left-col, .table-analisis th.text-left-col {
+		white-space: nowrap !important;
+		padding: 1.5px 4px !important;
+	}
+	.summary-row th, .summary-row td {
+		background-color: #eef3f8 !important;
+		border-top: 1.5px solid #1f4e78 !important;
 	}
 	.badge-kat {
-		font-size: 7.5px;
-		padding: 1px 3px;
+		display: block;
+		font-size: 5.8px;
+		line-height: 1.05;
+		padding: 1px 1.5px;
 		margin-top: 1px;
+		white-space: normal;
+		word-break: break-word;
 	}
 	.legend-print {
-		font-size: 8.5px !important;
-		margin-top: 4px !important;
+		background: #f8f9fa !important;
+		border: 1px solid #e0e0e0;
+		border-radius: 3px;
+		padding: 4px 6px;
+		font-size: 7.5px !important;
+		margin-top: 5px !important;
+		line-height: 1.4;
+	}
+	.legend-print .badge-kat {
+		display: inline-block;
+		font-size: 7px;
+		padding: 1px 4px;
+		white-space: nowrap;
 	}
 }
 </style>
@@ -197,6 +257,7 @@
 							<span><strong>Nama Tes:</strong> <span id="pv-tes">-</span></span>
 							<span><strong>Jumlah Peserta:</strong> <span id="pv-jml-siswa">0</span></span>
 							<span><strong>Jumlah Soal PG:</strong> <span id="pv-jml-soal">0</span></span>
+							<span class="print-only" style="float:right; margin-right:0;"><strong>Dicetak:</strong> <span id="pv-cetak">-</span></span>
 						</div>
 					</div>
 					<div id="pv-loading" class="text-center" style="display:none; padding:20px;">
@@ -255,6 +316,8 @@
 	});
 
 	$('#btn-print').click(function(){
+		var now = new Date();
+		$('#pv-cetak').text(now.toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' }) + ' ' + now.toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit' }));
 		window.print();
 	});
 
