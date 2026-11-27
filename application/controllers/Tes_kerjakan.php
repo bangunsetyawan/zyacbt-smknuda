@@ -222,6 +222,27 @@ class Tes_kerjakan extends Tes_Controller {
                 echo json_encode($status);
                 return;
             }
+
+            // Pengaman server: jika tes mewajibkan semua soal dijawab & waktu belum habis, tolak jika masih ada soal kosong
+            $tes_info = $this->db->select('tu.tesuser_id, tu.tesuser_creation_time, t.tes_duration_time, t.tes_wajib_jawab')
+                                 ->from('cbt_tes_user tu')
+                                 ->join('cbt_tes t', 't.tes_id = tu.tesuser_tes_id')
+                                 ->where('tu.tesuser_id', $tesuser_id)
+                                 ->limit(1)
+                                 ->get()
+                                 ->row();
+            $waktu_habis = ($tes_info && time() >= strtotime($tes_info->tesuser_creation_time.' +'.((int)$tes_info->tes_duration_time).' minutes'));
+            if(!$waktu_habis && $tes_info && !empty($tes_info->tes_wajib_jawab)){
+                $nomor_kosong = $this->cbt_tes_soal_model->get_nomor_blum_dijawab($tesuser_id);
+                if(!empty($nomor_kosong)){
+                    $status['status'] = 0;
+                    $status['wajib_jawab_blocked'] = 1;
+                    $status['nomor_kosong'] = $nomor_kosong;
+                    $status['pesan'] = 'Masih ada '.count($nomor_kosong).' soal yang belum dijawab: No. '.implode(', ', $nomor_kosong).'. Silahkan lengkapi sebelum mengakhiri ujian.';
+                    echo json_encode($status);
+                    return;
+                }
+            }
             
             $centang = $this->input->post('hentikan-centang', TRUE);
             if(!empty($centang)){
@@ -398,7 +419,11 @@ class Tes_kerjakan extends Tes_Controller {
                 $data['tes_user_id'] = $query_tes->tesuser_id;
                 $data['tes_nama'] = $query_tes->tes_nama;
                 $data['tes_dijawab'] = $this->cbt_tes_soal_model->count_by_tesuser_dijawab($query_tes->tesuser_id)->row()->hasil.' Soal';
-                $data['tes_blum_dijawab'] = $this->cbt_tes_soal_model->count_by_tesuser_blum_dijawab($query_tes->tesuser_id)->row()->hasil.' Soal';
+                $nomor_kosong = $this->cbt_tes_soal_model->get_nomor_blum_dijawab($query_tes->tesuser_id);
+                $data['tes_blum_dijawab'] = count($nomor_kosong).' Soal';
+                $data['tes_blum_dijawab_count'] = count($nomor_kosong);
+                $data['nomor_kosong'] = $nomor_kosong;
+                $data['tes_wajib_jawab'] = !empty($query_tes->tes_wajib_jawab) ? 1 : 0;
             }
         }
 

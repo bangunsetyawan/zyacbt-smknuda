@@ -39,9 +39,25 @@ class Cbt_tes_soal_model extends CI_Model{
 
     function count_by_tesuser_blum_dijawab($tesuser_id){
         $this->db->select('COUNT(*) AS hasil')
-                 ->where('tessoal_tesuser_id="'.$tesuser_id.'" AND tessoal_change_time IS NUlL')
+                 ->where('tessoal_tesuser_id', (int)$tesuser_id)
+                 ->where('tessoal_change_time IS NULL', NULL, FALSE)
                  ->from($this->table);
         return $this->db->get();
+    }
+
+    function get_nomor_blum_dijawab($tesuser_id){
+        $rows = $this->db->select('tessoal_order')
+                         ->where('tessoal_tesuser_id', (int)$tesuser_id)
+                         ->where('tessoal_change_time IS NULL', NULL, FALSE)
+                         ->from($this->table)
+                         ->order_by('tessoal_order', 'ASC')
+                         ->get()
+                         ->result();
+        $nomor = array();
+        foreach($rows as $r){
+            $nomor[] = (int)$r->tessoal_order;
+        }
+        return $nomor;
     }
 	
 	function get_by_kolom($kolom, $isi){

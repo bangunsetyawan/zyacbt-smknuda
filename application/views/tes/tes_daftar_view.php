@@ -400,6 +400,9 @@
                         <button type="button" class="btn btn-default btn-sm" style="margin-left:5px;" onclick="clearMasterDraft()">
                             <i class="fa fa-eraser"></i> Bersihkan Draf
                         </button>
+                        <label style="font-weight:600; font-size:12.5px; margin-left:14px; cursor:pointer; display:inline-block;">
+                            <input type="checkbox" id="master-wajib-jawab" value="1"> Wajib Jawab Semua Soal
+                        </label>
                         <button type="button" id="btn-publish-master" class="btn btn-success pull-right" onclick="publishMasterPlan()">
                             <i class="fa fa-paper-plane"></i> Terbitkan Semua ke Daftar Tes (<span id="master-row-count">0</span> baris)
                         </button>
@@ -1052,7 +1055,10 @@
         }
         $('#master-plan-pesan').html('');
         $('#modal-proses').modal('show');
-        $.post('<?php echo site_url($url."/batch_create"); ?>', { rows_json: JSON.stringify(rows) }, function(respon){
+        $.post('<?php echo site_url($url."/batch_create"); ?>', {
+            rows_json: JSON.stringify(rows),
+            wajib_jawab: $('#master-wajib-jawab').is(':checked') ? 1 : 0
+        }, function(respon){
             $('#modal-proses').modal('hide');
             var obj = $.parseJSON(respon);
             if(obj.status == 1){

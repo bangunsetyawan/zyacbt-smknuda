@@ -198,6 +198,7 @@ class Tes_daftar extends Member_Controller {
      */
     function batch_create(){
         $raw = $this->input->post('rows_json', false);
+        $wajib_jawab = $this->input->post('wajib_jawab', true) ? 1 : 0;
         $rows = json_decode((string)$raw, true);
         if(!is_array($rows) || empty($rows)){
             echo json_encode(array('status' => 0, 'pesan' => 'Belum ada baris jadwal yang disusun.'));
@@ -368,7 +369,8 @@ class Tes_daftar extends Member_Controller {
                 'tes_max_score'        => $max_score,
                 'tes_results_to_users' => 0,
                 'tes_detail_to_users'  => 0,
-                'tes_token'            => 0
+                'tes_token'            => 0,
+                'tes_wajib_jawab'      => $wajib_jawab
             ));
 
             foreach($p['groups'] as $gid){
@@ -412,7 +414,8 @@ class Tes_daftar extends Member_Controller {
                     'tes_max_score'        => $pe_max,
                     'tes_results_to_users' => 0,
                     'tes_detail_to_users'  => 0,
-                    'tes_token'            => 0
+                    'tes_token'            => 0,
+                    'tes_wajib_jawab'      => $wajib_jawab
                 ));
                 foreach($p['groups'] as $gid){
                     $this->cbt_tesgrup_model->save(array('tstgrp_tes_id' => $pair_id, 'tstgrp_grup_id' => $gid));

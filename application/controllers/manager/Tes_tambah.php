@@ -574,6 +574,7 @@ class Tes_tambah extends Member_Controller {
             $data['tes_results_to_users'] = $this->input->post('tambah-tunjukkan-hasil', true) ? 1 : 0;
             $data['tes_detail_to_users']  = $this->input->post('tambah-detail-hasil', true) ? 1 : 0;
             $data['tes_token']            = $this->input->post('tambah-token', true) ? 1 : 0;
+            $data['tes_wajib_jawab']      = $this->input->post('tambah-wajib-jawab', true) ? 1 : 0;
 
             // Dukung input tanggal+jam baru maupun format rentang lama
             $tgl_mulai = trim((string)$this->input->post('tgl-mulai', true));
@@ -615,7 +616,8 @@ class Tes_tambah extends Member_Controller {
                             'tes_begin_time' => $data['tes_begin_time'],
                             'tes_end_time' => $data['tes_end_time'],
                             'tes_duration_time' => $data['tes_duration_time'],
-                            'tes_token' => $data['tes_token']
+                            'tes_token' => $data['tes_token'],
+                            'tes_wajib_jawab' => $data['tes_wajib_jawab']
                         );
                         $this->cbt_tes_model->update('tes_id', $tes_id, $data_safe);
 
@@ -803,6 +805,7 @@ class Tes_tambah extends Member_Controller {
 	            $data['tunjukkan_hasil'] = $query->tes_results_to_users;
                 $data['detail_hasil'] = $query->tes_detail_to_users;
 	            $data['token'] = $query->tes_token;
+	            $data['wajib_jawab'] = isset($query->tes_wajib_jawab) ? (int)$query->tes_wajib_jawab : 0;
 	            $data['begin_time'] = $query->tes_begin_time;
 	            $data['end_time'] = $query->tes_end_time;
 	            $data['tgl_mulai'] = substr($query->tes_begin_time, 0, 10);

@@ -654,6 +654,27 @@
 		</div>
 	</form>
 	</div>
+
+	<!-- Pop-up Peringatan Wajib Jawab Semua Soal -->
+	<div class="modal" style="max-height: 100%; overflow-y: auto;" id="modal-wajib-jawab" data-backdrop="static" tabindex="-1" role="dialog" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header" style="background:#f39c12; color:#fff;">
+					<button class="close" type="button" data-dismiss="modal" style="color:#fff;">&times;</button>
+					<div style="font-size:16px; font-weight:700;"><i class="fa fa-exclamation-circle"></i> Belum Bisa Mengakhiri Ujian</div>
+				</div>
+				<div class="modal-body" style="padding:18px;">
+					<div id="wajib-jawab-msg" class="alert alert-warning" style="margin-bottom:14px; font-size:14px; line-height:1.5;"></div>
+					<button type="button" id="btn-lompat-kosong" class="btn btn-primary btn-block" style="font-weight:700; padding:10px 14px; font-size:14px;">
+						<i class="fa fa-share"></i> Lompat ke Soal No. 1
+					</button>
+					<button type="button" class="btn btn-default btn-block" data-dismiss="modal" style="margin-top:8px;">
+						<i class="fa fa-arrow-left"></i> Kembali ke Soal
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
 </div><!-- /.container -->
 
 <script type="text/javascript">
@@ -982,12 +1003,31 @@
         $('#form-kerjakan').submit();
     }
 
+    function tampilkanWajibJawab(nomorKosong){
+        var list = $.isArray(nomorKosong) ? nomorKosong : [];
+        var jml = list.length;
+        var firstNo = jml > 0 ? parseInt(list[0], 10) : 1;
+        $('#wajib-jawab-msg').html(
+            'Masih ada <b>' + jml + '</b> soal yang belum dijawab: <b>No. ' + list.join(', ') + '</b>.<br>' +
+            'Silahkan lengkapi sebelum mengakhiri ujian.'
+        );
+        $('#btn-lompat-kosong')
+            .data('target-no', firstNo)
+            .html('<i class="fa fa-share"></i> Lompat ke Soal No. ' + firstNo);
+        $('#modal-wajib-jawab').modal('show');
+    }
+
     function hentikan_tes(){
         autoSaveEssayBefore(function(){
             $("#modal-proses").modal('show');
             $('#hentikan-centang').prop("checked", false);
             $.getJSON('<?php echo site_url().'/'.$url; ?>/get_tes_info/'+$('#tes-id').val(), function(data){
                 if(data.data==1){
+                    if(data.tes_wajib_jawab == 1 && data.tes_blum_dijawab_count > 0){
+                        $("#modal-proses").modal('hide');
+                        tampilkanWajibJawab(data.nomor_kosong);
+                        return;
+                    }
                     $('#hentikan-tes-id').val(data.tes_id);
                     $('#hentikan-tes-user-id').val(data.tes_user_id);
                     $('#hentikan-tes-nama').val(data.tes_nama);
@@ -1059,6 +1099,14 @@
             hentikan_tes();
         });
 
+        $('#btn-lompat-kosong').click(function(){
+            var targetNo = $(this).data('target-no');
+            $('#modal-wajib-jawab').modal('hide');
+            if(targetNo){
+                $('#btn-soal-' + targetNo).trigger('click');
+            }
+        });
+
         $('#form-kerjakan').submit(function(){
             $("#modal-proses").modal('show');
             $.ajax({
@@ -1107,6 +1155,10 @@
                         var obj = $.parseJSON(respon);
                         if(obj.status==1){
                             window.location.reload();
+                        }else if(obj.wajib_jawab_blocked == 1){
+                            $("#modal-proses").modal('hide');
+                            $("#modal-hentikan").modal('hide');
+                            tampilkanWajibJawab(obj.nomor_kosong);
                         }else{
                             $("#modal-proses").modal('hide');
                             notify_error(obj.pesan);

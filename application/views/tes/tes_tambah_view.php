@@ -588,6 +588,9 @@
                                 <label style="font-weight:normal; font-size:12.5px; cursor:pointer; margin:0;">
                                     <input type="checkbox" name="tambah-detail-hasil" id="tambah-detail-hasil" value="1"> Tunjukkan Detail Jawaban
                                 </label>
+                                <label style="font-weight:600; font-size:12.5px; cursor:pointer; margin:0;">
+                                    <input type="checkbox" name="tambah-wajib-jawab" id="tambah-wajib-jawab" value="1"> Wajib Jawab Semua Soal
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -1093,6 +1096,7 @@
                 $('#tambah-tunjukkan-hasil').prop('checked', data.tunjukkan_hasil == 1);
                 $('#tambah-detail-hasil').prop('checked', data.detail_hasil == 1);
                 $('#tambah-token').prop('checked', data.token == 1);
+                $('#tambah-wajib-jawab').prop('checked', data.wajib_jawab == 1);
 
                 updateMaxScorePreview();
                 refresh_topik();
